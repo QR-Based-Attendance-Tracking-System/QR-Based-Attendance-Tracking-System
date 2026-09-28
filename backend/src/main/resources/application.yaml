@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: qr-attendance-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/qr_attendance_db
+    username: qr_attendance_app
+    password: Piyumantha@1
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
