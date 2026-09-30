@@ -5,4 +5,5 @@ import jakarta.validation.constraints.Size;
 
 public record AddCourseRequest(
         @NotBlank @Size(max = 50) String courseCode,
-        @NotBlank @Size(max = 150) String courseName) { }
+        @NotBlank @Size(max = 150) String courseName,
+        @NotBlank @Size(max = 50) String batch) { }

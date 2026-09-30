@@ -1,6 +1,5 @@
 export type SessionFormState = {
   course: string;
-  batch: string;
   location: string;
 };
 

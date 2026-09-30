@@ -7,7 +7,7 @@ import type { SessionFormState } from "@/features/attendance/types";
 import { endAttendanceSession, fetchLecturerCourses, startAttendanceSession, type LecturerCourse } from "@/features/attendance/services/attendance-service";
 
 export function SessionsPage() {
-  const [form, setForm] = useState<SessionFormState>({ course: "", batch: "", location: "" });
+  const [form, setForm] = useState<SessionFormState>({ course: "", location: "" });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

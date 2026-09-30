@@ -38,10 +38,12 @@ public class LecturerCourseService {
         Lecturer lecturer = getLecturer(username);
         String courseCode = request.courseCode().strip().toUpperCase(Locale.ROOT);
         String courseName = request.courseName().strip();
+        String batch = request.batch().strip();
         Course course = courseRepository.findByCourseCodeIgnoreCase(courseCode).orElseGet(() -> {
             Course newCourse = new Course();
             newCourse.setCourseCode(courseCode);
             newCourse.setCourseName(courseName);
+            newCourse.setBatch(batch);
             return courseRepository.save(newCourse);
         });
 

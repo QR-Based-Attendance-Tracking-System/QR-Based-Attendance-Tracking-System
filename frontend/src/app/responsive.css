@@ -143,6 +143,10 @@ select:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.app-shell .course-add-form {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 0.8fr) auto;
+}
+
 .app-shell .welcome-row,
 .app-shell .attendance-page-heading {
   min-width: 0;
@@ -259,7 +263,7 @@ select:focus-visible {
   }
 
   .app-shell .course-add-form {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .app-shell .course-save-button {

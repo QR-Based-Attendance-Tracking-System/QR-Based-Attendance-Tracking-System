@@ -24,6 +24,9 @@ public class Course {
     @Column(name = "course_name", nullable = false, length = 150)
     private String courseName;
 
+    @Column(name = "batch", nullable = false, length = 50)
+    private String batch;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -33,5 +36,7 @@ public class Course {
     public void setCourseCode(String courseCode) { this.courseCode = courseCode; }
     public String getCourseName() { return courseName; }
     public void setCourseName(String courseName) { this.courseName = courseName; }
+    public String getBatch() { return batch; }
+    public void setBatch(String batch) { this.batch = batch; }
     public Instant getCreatedAt() { return createdAt; }
 }

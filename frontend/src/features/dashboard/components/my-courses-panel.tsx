@@ -15,6 +15,7 @@ export function MyCoursesPanel() {
   const [showForm, setShowForm] = useState(false);
   const [courseCode, setCourseCode] = useState("");
   const [courseName, setCourseName] = useState("");
+  const [batch, setBatch] = useState("");
   const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +40,13 @@ export function MyCoursesPanel() {
     setSaving(true);
     setError(null);
     try {
-      const course = await addLecturerCourse({ courseCode: courseCode.trim(), courseName: courseName.trim() });
+      const course = await addLecturerCourse({ courseCode: courseCode.trim(), courseName: courseName.trim(), batch: batch.trim() });
       setCourses((current) => current.some((item) => item.id === course.id)
         ? current
         : [...current, course].sort((a, b) => a.courseCode.localeCompare(b.courseCode)));
       setCourseCode("");
       setCourseName("");
+      setBatch("");
       setShowForm(false);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Could not add the course.");
@@ -80,6 +82,7 @@ export function MyCoursesPanel() {
         <form className="course-add-form" onSubmit={submitCourse}>
           <label><span>Course code</span><input value={courseCode} onChange={(event) => setCourseCode(event.target.value)} maxLength={50} required placeholder="e.g. CS2040" /></label>
           <label><span>Course name</span><input value={courseName} onChange={(event) => setCourseName(event.target.value)} maxLength={150} required placeholder="e.g. Data Structures" /></label>
+          <label><span>Batch</span><input value={batch} onChange={(event) => setBatch(event.target.value)} maxLength={50} required placeholder="e.g. 2024" /></label>
           <button type="submit" className="course-save-button" disabled={saving}>{saving ? "Adding…" : "Add course"}</button>
         </form>
       )}
@@ -93,7 +96,7 @@ export function MyCoursesPanel() {
           {courses.map((course) => (
             <article className="dashboard-course-row" key={course.id}>
               <div className="course-avatar"><span aria-hidden="true">{course.courseCode.slice(0, 2)}</span></div>
-              <div className="dashboard-course-name"><strong>{course.courseName}</strong><span>{course.courseCode}</span></div>
+              <div className="dashboard-course-name"><strong>{course.courseName}</strong><span>{course.courseCode} · {course.batch}</span></div>
               <button type="button" className="course-remove-button" onClick={() => void removeCourse(course)} disabled={removingId === course.id} aria-label={`Remove ${course.courseName} from your courses`}>
                 {removingId === course.id ? "Removing…" : "Remove"}
               </button>

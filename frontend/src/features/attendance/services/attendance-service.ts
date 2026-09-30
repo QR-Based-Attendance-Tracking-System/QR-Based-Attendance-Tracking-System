@@ -27,13 +27,11 @@ export type LecturerDashboardData = {
   courses: Array<{ courseCode: string; sessionCount: number; checkInCount: number; latestSessionAt: string }>;
   recentSessions: Array<{ id: string; courseCode: string; startedAt: string; active: boolean; checkInCount: number }>;
 };
-export type LecturerCourse = { id: string; courseCode: string; courseName: string };
-export type AddLecturerCourseRequest = { courseCode: string; courseName: string };
-
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+export type LecturerCourse = { id: string; courseCode: string; courseName: string; batch: string };
+export type AddLecturerCourseRequest = { courseCode: string; courseName: string; batch: string };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBase}${path}`, {
+  const response = await fetch(path, {
     ...init,
     cache: "no-store",
     headers: { "Content-Type": "application/json", ...init?.headers },
