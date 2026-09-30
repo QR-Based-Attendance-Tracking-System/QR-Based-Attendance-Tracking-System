@@ -1,24 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SessionDetailsForm } from "@/features/attendance/components/session-details-form";
 import { SessionQrCard } from "@/features/attendance/components/session-qr-card";
 import type { SessionFormState } from "@/features/attendance/types";
+import { endAttendanceSession, fetchLecturerCourses, startAttendanceSession, type LecturerCourse } from "@/features/attendance/services/attendance-service";
 
 export function SessionsPage() {
   const [form, setForm] = useState<SessionFormState>({ course: "", batch: "", location: "" });
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
-  const [sessionId, setSessionId] = useState("051 227");
-  const qrToken = `${form.course}|${form.batch}|${form.location}|${sessionId}`;
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+  const [courses, setCourses] = useState<LecturerCourse[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchLecturerCourses()
+      .then((result) => {
+        if (mounted) setCourses(result);
+      })
+      .catch((requestError: unknown) => {
+        if (mounted) setError(requestError instanceof Error ? requestError.message : "Could not load your courses.");
+      })
+      .finally(() => {
+        if (mounted) setIsLoadingCourses(false);
+      });
+    return () => { mounted = false; };
+  }, []);
 
   function updateForm(field: keyof SessionFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function startSession() {
-    setIsActive(true);
-    setSessionId(`${String(Math.floor(Math.random() * 900) + 100)} ${String(Math.floor(Math.random() * 900) + 100)}`);
+  async function startSession() {
+    setIsSaving(true);
+    setError(null);
+    try {
+      const session = await startAttendanceSession(form);
+      setSessionId(session.id);
+      setIsActive(session.active);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Could not start the attendance session.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  return <div className="session-page"><h2>Start Attendance Session</h2><div className="session-layout"><SessionDetailsForm {...form} onChange={updateForm} isActive={isActive} onStart={startSession} /><SessionQrCard qrToken={qrToken} sessionId={sessionId} isActive={isActive} onEnd={() => setIsActive(false)} /></div></div>;
+  async function endSession() {
+    if (!sessionId) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      await endAttendanceSession(sessionId);
+      setIsActive(false);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Could not end the attendance session.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return <div className="session-page"><h2>Start Attendance Session</h2>{error && <p role="alert" className="attendance-error">{error}</p>}<div className="session-layout"><SessionDetailsForm {...form} onChange={updateForm} isActive={isActive} isSaving={isSaving} isLoadingCourses={isLoadingCourses} courses={courses} onStart={startSession} /><SessionQrCard sessionId={sessionId} isActive={isActive} isSaving={isSaving} onEnd={endSession} /></div></div>;
 }

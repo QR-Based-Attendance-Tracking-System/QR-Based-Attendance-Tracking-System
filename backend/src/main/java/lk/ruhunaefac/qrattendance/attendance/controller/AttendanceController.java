@@ -1,12 +1,20 @@
 package lk.ruhunaefac.qrattendance.attendance.controller;
 
 import jakarta.validation.Valid;
+import java.util.function.Supplier;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lk.ruhunaefac.qrattendance.attendance.dto.AttendanceRecordResponse;
 import lk.ruhunaefac.qrattendance.attendance.dto.AttendanceSessionResponse;
 import lk.ruhunaefac.qrattendance.attendance.dto.CheckInRequest;
+import lk.ruhunaefac.qrattendance.attendance.dto.CodeCheckInRequest;
+import lk.ruhunaefac.qrattendance.attendance.dto.QrChallengeResponse;
+import lk.ruhunaefac.qrattendance.attendance.dto.LecturerDashboardResponse;
 import lk.ruhunaefac.qrattendance.attendance.dto.StartAttendanceSessionRequest;
+import lk.ruhunaefac.qrattendance.attendance.entity.AttendanceRecord;
+import lk.ruhunaefac.qrattendance.attendance.exception.AttendanceAlreadyMarkedException;
+import lk.ruhunaefac.qrattendance.attendance.exception.StudentNotEnrolledException;
 import lk.ruhunaefac.qrattendance.attendance.service.AttendanceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,9 +38,14 @@ public class AttendanceController {
     }
 
     @PostMapping("/sessions")
-    public ResponseEntity<AttendanceSessionResponse> startSession(@Valid @RequestBody StartAttendanceSessionRequest request) {
+    public ResponseEntity<AttendanceSessionResponse> startSession(@Valid @RequestBody StartAttendanceSessionRequest request,
+                                                                   @AuthenticationPrincipal UserDetails principal) {
+        String lecturerName = principal == null ? request.lecturerName() : principal.getUsername();
+        var session = request.lectureHallId() != null
+                ? attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallId())
+                : attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallName());
         return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceSessionResponse.from(
-                attendanceService.startSession(request.courseCode(), request.lecturerName(), request.lectureHallId())));
+                session));
     }
 
     @PostMapping("/sessions/{sessionId}/end")
@@ -40,16 +53,53 @@ public class AttendanceController {
         return AttendanceSessionResponse.from(attendanceService.stopSession(sessionId));
     }
 
+    @GetMapping("/sessions/latest")
+    public ResponseEntity<AttendanceSessionResponse> getLatestSession() {
+        Optional<AttendanceSessionResponse> latest = attendanceService.getLatestSession().map(AttendanceSessionResponse::from);
+        return latest.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/lecturer-dashboard")
+    public LecturerDashboardResponse getLecturerDashboard(@AuthenticationPrincipal UserDetails principal) {
+        if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        return attendanceService.getLecturerDashboard(principal.getUsername());
+    }
+
+    @GetMapping("/sessions/{sessionId}/qr-challenge")
+    public QrChallengeResponse getQrChallenge(@PathVariable UUID sessionId) {
+        return attendanceService.getQrChallenge(sessionId);
+    }
+
     @PostMapping("/check-in")
     public ResponseEntity<AttendanceRecordResponse> checkIn(@Valid @RequestBody CheckInRequest request,
                                                             @AuthenticationPrincipal UserDetails principal) {
         if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
-        return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceRecordResponse.from(
-                attendanceService.checkIn(request.qrToken(), principal.getUsername())));
+        return createCheckIn(() -> attendanceService.checkIn(request.qrToken(), principal.getUsername()));
+    }
+
+    @PostMapping("/check-in/code")
+    public ResponseEntity<AttendanceRecordResponse> checkInWithCode(@Valid @RequestBody CodeCheckInRequest request,
+                                                                     @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        return createCheckIn(() -> attendanceService.checkInWithCode(request.sessionId(), request.code(), principal.getUsername()));
     }
 
     @GetMapping("/sessions/{sessionId}/records")
     public List<AttendanceRecordResponse> getRecords(@PathVariable UUID sessionId) {
         return attendanceService.getRecords(sessionId).stream().map(AttendanceRecordResponse::from).toList();
+    }
+
+    private ResponseEntity<AttendanceRecordResponse> createCheckIn(Supplier<AttendanceRecord> checkIn) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceRecordResponse.from(checkIn.get()));
+        } catch (AttendanceAlreadyMarkedException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
+        } catch (StudentNotEnrolledException exception) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, exception.getMessage(), exception);
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+        }
     }
 }

@@ -1,16 +1,31 @@
 package lk.ruhunaefac.qrattendance.attendance.service;
 
 import java.time.Instant;
-import java.util.UUID;
 import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import lk.ruhunaefac.qrattendance.attendance.entity.AttendanceRecord;
 import lk.ruhunaefac.qrattendance.attendance.entity.AttendanceSession;
+import lk.ruhunaefac.qrattendance.attendance.dto.QrChallengeResponse;
+import lk.ruhunaefac.qrattendance.attendance.dto.LecturerDashboardResponse;
+import lk.ruhunaefac.qrattendance.attendance.exception.AttendanceAlreadyMarkedException;
+import lk.ruhunaefac.qrattendance.attendance.exception.StudentNotEnrolledException;
 import lk.ruhunaefac.qrattendance.attendance.repository.AttendanceRecordRepository;
 import lk.ruhunaefac.qrattendance.attendance.repository.AttendanceSessionRepository;
 import lk.ruhunaefac.qrattendance.lecturehall.entity.LectureHall;
 import lk.ruhunaefac.qrattendance.lecturehall.repository.LectureHallRepository;
+import lk.ruhunaefac.qrattendance.course.entity.Course;
+import lk.ruhunaefac.qrattendance.course.repository.CourseRepository;
+import lk.ruhunaefac.qrattendance.course.repository.StudentCourseRepository;
+import lk.ruhunaefac.qrattendance.user.entity.Student;
+import lk.ruhunaefac.qrattendance.user.repository.StudentRepository;
 import lk.ruhunaefac.qrattendance.qr.service.QrTokenService;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,12 +35,21 @@ public class AttendanceService {
     private final AttendanceRecordRepository recordRepository;
     private final LectureHallRepository lectureHallRepository;
     private final QrTokenService qrTokenService;
+    private final CourseRepository courseRepository;
+    private final StudentRepository studentRepository;
+    private final StudentCourseRepository studentCourseRepository;
 
-    public AttendanceService(AttendanceSessionRepository sessionRepository, AttendanceRecordRepository recordRepository, LectureHallRepository lectureHallRepository, QrTokenService qrTokenService) {
+    public AttendanceService(AttendanceSessionRepository sessionRepository, AttendanceRecordRepository recordRepository,
+                             LectureHallRepository lectureHallRepository, QrTokenService qrTokenService,
+                             CourseRepository courseRepository, StudentRepository studentRepository,
+                             StudentCourseRepository studentCourseRepository) {
         this.sessionRepository = sessionRepository;
         this.recordRepository = recordRepository;
         this.lectureHallRepository = lectureHallRepository;
         this.qrTokenService = qrTokenService;
+        this.courseRepository = courseRepository;
+        this.studentRepository = studentRepository;
+        this.studentCourseRepository = studentCourseRepository;
     }
 
     @Transactional
@@ -33,6 +57,15 @@ public class AttendanceService {
         byte[] secretKey = new byte[32];
         new SecureRandom().nextBytes(secretKey);
         return startSession(courseCode, lecturerName, lectureHallId, secretKey);
+    }
+
+    @Transactional
+    public AttendanceSession startSession(String courseCode, String lecturerName, String lectureHallName) {
+        LectureHall hall = lectureHallRepository.findByName(lectureHallName)
+                .orElseThrow(() -> new IllegalArgumentException("Lecture hall not found: " + lectureHallName));
+        byte[] secretKey = new byte[32];
+        new SecureRandom().nextBytes(secretKey);
+        return startSession(courseCode, lecturerName, hall.getId(), secretKey);
     }
 
     @Transactional
@@ -53,24 +86,119 @@ public class AttendanceService {
     }
 
     @Transactional
-    public AttendanceRecord recordAttendance(UUID sessionId, String studentId, String status) {
+    public AttendanceRecord recordAttendance(UUID sessionId, String authenticatedUsername, String status) {
         AttendanceSession session = getSession(sessionId);
+        Course course = courseRepository.findByCourseCodeIgnoreCase(session.getCourseCode())
+                .orElseThrow(() -> new IllegalArgumentException("Course for this attendance session was not found"));
+        Student student = studentRepository.findByUserUsername(authenticatedUsername)
+                .orElseThrow(StudentNotEnrolledException::new);
+        if (!studentCourseRepository.existsByStudent_IdAndCourse_Id(student.getId(), course.getId())) {
+            throw new StudentNotEnrolledException();
+        }
         if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
-        AttendanceRecord record = new AttendanceRecord(); record.setSession(session); record.setStudentId(studentId);
+        if (recordRepository.existsBySessionIdAndStudentId(sessionId, student.getStudentId())) {
+            throw new AttendanceAlreadyMarkedException();
+        }
+
+        AttendanceRecord record = new AttendanceRecord(); record.setSession(session); record.setStudentId(student.getStudentId());
         record.setStatus(status == null ? "PRESENT" : status);
-        return recordRepository.save(record);
+        try {
+            return recordRepository.saveAndFlush(record);
+        } catch (DataIntegrityViolationException exception) {
+            if (isDuplicateAttendanceConstraint(exception)) throw new AttendanceAlreadyMarkedException();
+            throw exception;
+        }
     }
 
     @Transactional
-    public AttendanceRecord checkIn(String qrToken, String authenticatedStudentId) {
+    public AttendanceRecord checkIn(String qrToken, String authenticatedUsername) {
         UUID sessionId = qrTokenService.validateToken(qrToken);
-        return recordAttendance(sessionId, authenticatedStudentId, "PRESENT");
+        return recordAttendance(sessionId, authenticatedUsername, "PRESENT");
+    }
+
+    @Transactional(readOnly = true)
+    public QrChallengeResponse getQrChallenge(UUID sessionId) {
+        AttendanceSession session = getSession(sessionId);
+        if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
+        Instant serverTime = Instant.now();
+        Instant expiresAt = qrTokenService.currentWindowExpiry(serverTime);
+        long windowStart = qrTokenService.currentWindowStart(serverTime);
+        return new QrChallengeResponse(qrTokenService.generateToken(sessionId, expiresAt),
+                qrTokenService.generateCode(sessionId, windowStart), expiresAt, serverTime);
+    }
+
+    @Transactional
+    public AttendanceRecord checkInWithCode(UUID sessionId, String code, String authenticatedUsername) {
+        if (!qrTokenService.validateCode(sessionId, code, Instant.now())) {
+            throw new IllegalArgumentException("Attendance code is invalid or expired");
+        }
+        return recordAttendance(sessionId, authenticatedUsername, "PRESENT");
     }
 
     @Transactional(readOnly = true)
     public List<AttendanceRecord> getRecords(UUID sessionId) {
         getSession(sessionId);
-        return recordRepository.findBySessionId(sessionId);
+        return recordRepository.findBySessionIdOrderByCheckedInAtDesc(sessionId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AttendanceSession> getLatestSession() {
+        return sessionRepository.findFirstByOrderByStartedAtDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public LecturerDashboardResponse getLecturerDashboard(String lecturerName) {
+        List<AttendanceSession> sessions = sessionRepository.findByLecturerNameOrderByStartedAtDesc(lecturerName);
+        List<UUID> sessionIds = sessions.stream().map(AttendanceSession::getId).toList();
+        Map<UUID, Long> checkInsBySession = new HashMap<>();
+        if (!sessionIds.isEmpty()) {
+            recordRepository.countBySessionIds(sessionIds).forEach(count ->
+                    checkInsBySession.put(count.getSessionId(), count.getAttendanceCount()));
+        }
+
+        Map<String, CourseAccumulator> courses = new LinkedHashMap<>();
+        long totalCheckIns = 0;
+        long activeSessions = 0;
+        for (AttendanceSession session : sessions) {
+            long checkIns = checkInsBySession.getOrDefault(session.getId(), 0L);
+            totalCheckIns += checkIns;
+            if (session.isActive()) activeSessions++;
+            courses.computeIfAbsent(session.getCourseCode(), ignored -> new CourseAccumulator(session.getStartedAt()))
+                    .add(checkIns);
+        }
+
+        List<LecturerDashboardResponse.CourseSummary> courseSummaries = courses.entrySet().stream()
+                .map(entry -> new LecturerDashboardResponse.CourseSummary(entry.getKey(), entry.getValue().sessions,
+                        entry.getValue().checkIns, entry.getValue().latestSessionAt))
+                .toList();
+        List<LecturerDashboardResponse.SessionSummary> recentSessions = sessions.stream().limit(5)
+                .map(session -> new LecturerDashboardResponse.SessionSummary(session.getId().toString(),
+                        session.getCourseCode(), session.getStartedAt(), session.isActive(),
+                        checkInsBySession.getOrDefault(session.getId(), 0L)))
+                .toList();
+
+        String displayName = sessions.isEmpty() ? lecturerName : sessions.getFirst().getLecturerName();
+        return new LecturerDashboardResponse(displayName, courses.size(), sessions.size(), totalCheckIns,
+                activeSessions, courseSummaries, recentSessions);
+    }
+
+    private static final class CourseAccumulator {
+        private final Instant latestSessionAt;
+        private long sessions;
+        private long checkIns;
+        private CourseAccumulator(Instant latestSessionAt) { this.latestSessionAt = latestSessionAt; }
+        private void add(long count) { sessions++; checkIns += count; }
+    }
+
+    private boolean isDuplicateAttendanceConstraint(DataIntegrityViolationException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException violation) {
+                return "uq_student_session".equalsIgnoreCase(violation.getConstraintName());
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     @Transactional(readOnly = true)

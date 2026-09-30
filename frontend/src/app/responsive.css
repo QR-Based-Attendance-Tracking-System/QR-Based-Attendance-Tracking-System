@@ -1,0 +1,645 @@
+/* Fluid layout and device breakpoints shared by every app route. */
+:root {
+  --sidebar-width: 237px;
+  --page-gutter: clamp(18px, 4vw, 68px);
+}
+
+html {
+  min-width: 0;
+  scroll-padding-top: 1rem;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #a87000;
+  outline-offset: 3px;
+}
+
+.app-shell .select-wrap select:focus-visible,
+.app-shell .course-add-form input:focus-visible {
+  outline: 3px solid #a87000;
+  outline-offset: 3px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+.app-shell .content {
+  width: calc(100% - var(--sidebar-width));
+  max-width: none;
+  min-width: 0;
+  margin-left: var(--sidebar-width);
+  padding-inline: var(--page-gutter);
+  padding-top: clamp(28px, 4.5vw, 58px);
+  padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+  border-top-left-radius: clamp(24px, 4vw, 50px);
+}
+
+.app-shell .content > * {
+  width: 100%;
+  max-width: 1600px;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.app-shell .topbar {
+  height: clamp(100px, 13.6vw, 143px);
+  min-width: 0;
+  padding-inline: clamp(18px, 4.3vw, 68px);
+  gap: clamp(14px, 3vw, 42px);
+}
+
+.app-shell .menu-button {
+  display: none;
+}
+
+.app-shell .navigation-backdrop {
+  display: none;
+}
+
+.app-shell .brand,
+.app-shell .topbar-right {
+  min-width: 0;
+}
+
+.app-shell .brand h1 {
+  font-size: clamp(21px, 2.5vw, 32px);
+}
+
+.app-shell .sidebar {
+  top: clamp(100px, 13.6vw, 143px);
+  width: var(--sidebar-width);
+  min-height: calc(100vh - clamp(100px, 13.6vw, 143px));
+  min-height: calc(100dvh - clamp(100px, 13.6vw, 143px));
+  padding: clamp(34px, 6vw, 80px) 16px 32px;
+}
+
+.app-shell .nav-item {
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  padding: 12px 16px;
+  gap: 14px;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .session-page .session-layout {
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: clamp(20px, 3vw, 42px);
+}
+
+.app-shell .details-card,
+.app-shell .qr-card,
+.app-shell .panel,
+.app-shell .stat-card {
+  min-width: 0;
+}
+
+.app-shell .qr-frame {
+  width: min(100%, 495px);
+  padding: clamp(16px, 4vw, 42px);
+  border-radius: clamp(16px, 2vw, 27px);
+}
+
+.app-shell .select-wrap select {
+  min-width: 0;
+  font-size: 16px;
+}
+
+.app-shell .attendance-table-wrap {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-shell .attendance-table {
+  min-width: 560px;
+}
+
+.app-shell .dashboard-data-grid {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+.app-shell .attendance-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.app-shell .welcome-row,
+.app-shell .attendance-page-heading {
+  min-width: 0;
+  gap: 24px;
+}
+
+.app-shell .welcome-row > *,
+.app-shell .attendance-page-heading > * {
+  min-width: 0;
+}
+
+.app-shell .date-card {
+  min-width: min(340px, 42%);
+}
+
+@media (max-width: 1200px) {
+  :root {
+    --sidebar-width: 198px;
+    --page-gutter: clamp(22px, 3.5vw, 42px);
+  }
+
+  .app-shell .sidebar {
+    padding-inline: 12px;
+  }
+
+  .app-shell .nav-item {
+    gap: 11px;
+    padding-inline: 12px;
+    font-size: 14px;
+  }
+
+  .app-shell .nav-item svg {
+    width: 23px;
+    height: 23px;
+    flex: 0 0 auto;
+  }
+
+  .app-shell .session-page .session-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .app-shell .dashboard-data-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .attendance-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1050px) {
+  .app-shell .session-page .session-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --sidebar-width: 176px;
+    --page-gutter: clamp(20px, 3.2vw, 30px);
+  }
+
+  .app-shell .topbar {
+    gap: 14px;
+  }
+
+  .app-shell .user-copy {
+    display: none;
+  }
+
+  .app-shell .user-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 18px;
+  }
+
+  .app-shell .welcome-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .app-shell .date-card {
+    width: 100%;
+    min-width: 0;
+    padding: 16px 22px;
+  }
+
+  .app-shell .welcome-row h2,
+  .app-shell .session-page > h2 {
+    font-size: clamp(32px, 5vw, 42px);
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell .attendance-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-shell .session-page .session-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .details-card {
+    width: 100%;
+  }
+
+  .app-shell .qr-card {
+    min-height: 0;
+  }
+
+  .app-shell .qr-card h3 {
+    margin-bottom: 28px;
+  }
+
+  .app-shell .course-add-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+
+  .app-shell .course-save-button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --sidebar-width: 0px;
+    --page-gutter: 18px;
+  }
+
+  .app-shell .topbar {
+    height: auto;
+    min-height: 76px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+    gap: 8px;
+  }
+
+  .app-shell .menu-button {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    padding: 7px;
+  }
+
+  .app-shell .menu-button svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .app-shell .brand {
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+
+  .app-shell .brand h1 {
+    font-size: clamp(15px, 4.4vw, 20px);
+    letter-spacing: -0.35px;
+    white-space: nowrap;
+  }
+
+  .app-shell .brand p {
+    font-size: clamp(9px, 2.6vw, 11px);
+  }
+
+  .app-shell .crest {
+    width: 40px;
+    height: 60px;
+    flex: 0 0 40px;
+    font-size: 8px;
+  }
+
+  .app-shell .crest i {
+    width: 26px;
+    height: 26px;
+    font-size: 7px;
+  }
+
+  .app-shell .topbar-right {
+    flex: 0 0 auto;
+    margin-left: 0;
+    gap: 4px;
+  }
+
+  .app-shell .topbar-right .icon-button,
+  .app-shell .user-copy {
+    display: none;
+  }
+
+  .app-shell .user-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .app-shell .sidebar {
+    position: fixed;
+    z-index: 30;
+    display: block;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(82vw, 320px);
+    min-height: 0;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 12px max(18px, env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    background: var(--deep-brown);
+    box-shadow: 12px 0 36px #190b05aa;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 220ms ease, visibility 220ms ease;
+  }
+
+  .app-shell .sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .app-shell .sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    padding: 58px 0 0;
+  }
+
+  .app-shell .nav-item {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 8px 12px;
+    gap: 7px;
+    border-radius: 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .app-shell .navigation-backdrop {
+    position: fixed;
+    z-index: 29;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    padding: 0;
+    background: #170b06a8;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 220ms ease, visibility 220ms ease;
+  }
+
+  .app-shell .navigation-backdrop.is-visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .app-shell .nav-item svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .app-shell .content {
+    width: 100%;
+    min-height: calc(100vh - 76px);
+    min-height: calc(100dvh - 76px);
+    margin: 0;
+    padding: 26px var(--page-gutter) max(34px, env(safe-area-inset-bottom, 0px));
+    border-top-left-radius: 24px;
+  }
+
+  .app-shell .content > * {
+    max-width: none;
+  }
+
+  .app-shell .welcome-row h2,
+  .app-shell .session-page > h2,
+  .app-shell .attendance-page-heading h2 {
+    font-size: clamp(28px, 8vw, 36px);
+    letter-spacing: -0.8px;
+  }
+
+  .app-shell .welcome-row p,
+  .app-shell .attendance-page-heading p {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .app-shell .session-page > h2 {
+    margin: 0 0 24px;
+  }
+
+  .app-shell .session-layout {
+    gap: 18px;
+  }
+
+  .app-shell .details-card {
+    padding: 23px 14px 28px;
+    border-radius: 20px;
+  }
+
+  .app-shell .details-card h3,
+  .app-shell .qr-card h3 {
+    font-size: 23px;
+  }
+
+  .app-shell .field {
+    margin-inline: 2px;
+  }
+
+  .app-shell .field > span {
+    font-size: 14px;
+  }
+
+  .app-shell .select-wrap select {
+    height: 52px;
+    border-radius: 12px;
+    padding-inline: 12px 36px;
+    font-size: 16px;
+  }
+
+  .app-shell .select-wrap svg {
+    top: 17px;
+    right: 12px;
+  }
+
+  .app-shell .start-button,
+  .app-shell .end-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    height: auto;
+    margin-top: 24px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+
+  .app-shell .qr-card {
+    padding: 23px 14px;
+    border-radius: 20px;
+  }
+
+  .app-shell .qr-frame {
+    width: min(100%, 420px);
+    padding: clamp(14px, 5vw, 24px);
+    border-width: 2px;
+  }
+
+  .app-shell .session-code {
+    margin-top: 18px;
+    font-size: clamp(32px, 10vw, 42px);
+  }
+
+  .app-shell .live-label {
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .app-shell .dashboard-actions {
+    align-items: stretch;
+    flex-direction: column;
+    margin: 22px 0;
+    padding: 18px;
+  }
+
+  .app-shell .dashboard-create-button {
+    align-self: flex-start;
+    min-height: 46px;
+  }
+
+  .app-shell .dashboard-data-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .app-shell .dashboard-course-panel,
+  .app-shell .dashboard-recent-panel,
+  .app-shell .attendance-records {
+    min-height: 0;
+    padding: 20px 15px;
+    border-radius: 18px;
+  }
+
+  .app-shell .attendance-page-heading {
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .app-shell .attendance-refresh-label {
+    font-size: 12px;
+  }
+
+  .app-shell .attendance-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .app-shell .attendance-summary > div {
+    min-height: 94px;
+    padding: 14px;
+    border-radius: 15px;
+  }
+
+  .app-shell .attendance-summary span {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .app-shell .attendance-summary strong {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell .attendance-summary .attendance-total strong {
+    font-size: 28px;
+  }
+
+  .app-shell .attendance-table th,
+  .app-shell .attendance-table td {
+    padding: 12px 10px;
+    font-size: 13px;
+  }
+
+  .app-shell .dashboard-course-panel .panel-heading,
+  .app-shell .dashboard-recent-panel .panel-heading,
+  .app-shell .my-courses-panel .panel-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .app-shell .dashboard-course-row time {
+    display: none;
+  }
+
+  .app-shell .course-add-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .course-save-button {
+    grid-column: auto;
+    min-height: 44px;
+  }
+
+  .app-shell .course-add-form input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell .brand h1 {
+    font-size: 15px;
+  }
+
+  .app-shell .brand p {
+    font-size: 9px;
+  }
+
+  .app-shell .menu-button {
+    width: 38px;
+    flex-basis: 38px;
+  }
+
+  .app-shell .crest {
+    width: 34px;
+    flex-basis: 34px;
+    height: 52px;
+  }
+
+  .app-shell .crest i {
+    width: 22px;
+    height: 22px;
+  }
+
+  .app-shell .user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-shell .attendance-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .attendance-summary > div {
+    min-height: 76px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
