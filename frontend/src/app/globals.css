@@ -1,6 +1,22 @@
 @import "tailwindcss";
 @import "./responsive.css";
 :root { --brown:#4a220d; --deep-brown:#3c1908; --cream:#fff8e4; --gold:#ffc313; --ink:#4a220d; --muted:#756d66; }
+@theme inline {
+  --color-background: #45240e;
+  --color-foreground: #ffffff;
+  --font-sans: Arial, Helvetica, sans-serif;
+}
+
+html, body { min-height:100%; margin:0; }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow:0 0 0 1000px #d4d4d4 inset !important;
+  -webkit-text-fill-color:#45240e !important;
+  transition:background-color 9999s ease-in-out 0s;
+}
+
 * { box-sizing:border-box; } body { margin:0; background:var(--brown); color:var(--ink); font-family:Arial,Helvetica,sans-serif; } button,select { font:inherit; } button { cursor:pointer; }
 .app-shell { min-height:100vh; background:var(--brown); }.topbar { height:143px; color:white; display:flex; align-items:center; padding:0 4.3%; gap:42px; }.menu-button,.icon-button { border:0; color:white; background:transparent; display:grid; place-items:center; padding:8px; }.menu-button svg { width:36px; height:36px; stroke-width:3; }.brand { display:flex; align-items:center; gap:14px; }.crest { width:65px; height:98px; border:2px solid var(--gold); border-radius:48% 48% 40% 40%; background:#d79800; color:#57230d; display:flex; flex-direction:column; align-items:center; justify-content:space-around; box-shadow:0 3px 10px #281006; font-size:14px; font-weight:800; }.crest i { border:1px solid #57230d; border-radius:50%; width:42px; height:42px; display:grid; place-items:center; font-style:normal; font-size:11px; }.brand h1 { margin:0; color:var(--gold); font-size:32px; line-height:1; letter-spacing:-.7px; }.brand p { margin:4px 0 0; line-height:1.1; font-size:15px; color:#f8f0e6; }.topbar-right { margin-left:auto; display:flex; align-items:center; gap:20px; }.icon-button svg { width:34px; height:34px; stroke-width:1.8; }.user-avatar { width:96px; height:96px; border:2px solid var(--gold); border-radius:50%; background:#d5d5d5; display:grid; place-items:center; color:#69421f; font-weight:700; font-size:23px; }.user-copy { display:flex; flex-direction:column; gap:5px; font-size:19px; color:white; }.user-copy span { font-size:16px; }
 .sidebar { position:absolute; left:0; top:143px; width:237px; bottom:0; min-height:calc(100vh - 143px); background:var(--deep-brown); padding:80px 22px; }.nav-item { width:100%; height:60px; display:flex; align-items:center; gap:20px; padding:0 24px; border:0; border-radius:17px; color:#f8eee5; background:transparent; font-size:16px; font-weight:700; text-align:left; margin-bottom:29px; }.nav-item svg { width:27px; height:27px; }.nav-item.active { color:#3d200c; background:var(--gold); box-shadow:0 5px 8px #28100666; }

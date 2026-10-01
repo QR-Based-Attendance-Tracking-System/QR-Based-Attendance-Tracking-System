@@ -125,6 +125,46 @@ select:focus-visible {
   font-size: 16px;
 }
 
+.app-shell .field-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 67px;
+  border: 1px solid #d5c8af;
+  border-radius: 18px;
+  padding: 0 16px;
+  color: var(--ink);
+  background: #fffaf0;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+.app-shell .field-input:focus-visible {
+  border-color: #b38310;
+  box-shadow: 0 0 0 3px #ffc31330;
+}
+
+.app-shell .duration-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.app-shell .duration-inputs label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.app-shell .duration-slider {
+  display: none;
+}
+
 .app-shell .attendance-table-wrap {
   max-width: 100%;
   overscroll-behavior-inline: contain;
@@ -467,6 +507,23 @@ select:focus-visible {
     border-radius: 12px;
     padding-inline: 12px 36px;
     font-size: 16px;
+  }
+
+  .app-shell .field-input {
+    height: 52px;
+    border-radius: 12px;
+    padding-inline: 12px;
+  }
+
+  .app-shell .duration-slider {
+    display: block;
+    width: 100%;
+    min-height: 36px;
+    margin: 2px 0 0;
+    padding: 0;
+    accent-color: #a87000;
+    cursor: pointer;
+    touch-action: pan-x;
   }
 
   .app-shell .select-wrap svg {

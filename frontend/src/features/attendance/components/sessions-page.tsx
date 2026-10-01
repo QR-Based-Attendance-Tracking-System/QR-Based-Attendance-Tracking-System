@@ -7,7 +7,12 @@ import type { SessionFormState } from "@/features/attendance/types";
 import { endAttendanceSession, fetchLecturerCourses, startAttendanceSession, type LecturerCourse } from "@/features/attendance/services/attendance-service";
 
 export function SessionsPage() {
-  const [form, setForm] = useState<SessionFormState>({ course: "", location: "" });
+  const [form, setForm] = useState<SessionFormState>(() => {
+    const now = new Date();
+    const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+    const startTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    return { course: "", location: "", date, startTime, durationHours: "1", durationMinutes: "0" };
+  });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
