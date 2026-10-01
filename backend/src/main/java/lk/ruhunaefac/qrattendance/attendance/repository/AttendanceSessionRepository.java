@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, UUID> {
     Optional<AttendanceSession> findFirstByOrderByStartedAtDesc();
     List<AttendanceSession> findByLecturerNameOrderByStartedAtDesc(String lecturerName);
+    List<AttendanceSession> findByLecturerNameAndActiveTrue(String lecturerName);
     Optional<AttendanceSession> findFirstByLecturerNameOrderByStartedAtDesc(String lecturerName);
     Optional<AttendanceSession> findByIdAndLecturerName(UUID id, String lecturerName);
 }

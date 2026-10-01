@@ -4,6 +4,7 @@ export type AuthUser = {
   role: "STUDENT" | "LECTURER" | "ADMIN";
   fullName: string | null;
   institutionalId: string | null;
+  department?: string | null;
 };
 
 async function csrfToken() {
@@ -22,7 +23,11 @@ async function request<T>(path: string, body?: unknown, method = "GET"): Promise
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.detail || data?.message || (response.status === 401 ? "Invalid username or password." : `Request failed (${response.status}).`));
+    throw new Error(data?.detail || data?.message || data?.title || data?.error || (response.status === 401
+      ? "Invalid username or password."
+      : response.status === 403 && path.includes("/register/")
+        ? "Account creation is disabled or the registration code is invalid."
+        : `Request failed (${response.status}).`));
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;

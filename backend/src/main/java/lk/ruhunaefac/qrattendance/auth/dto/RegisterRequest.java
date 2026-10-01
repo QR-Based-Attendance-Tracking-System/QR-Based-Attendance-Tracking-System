@@ -11,6 +11,7 @@ public record RegisterRequest(
         @NotBlank @Size(min = 12, max = 128) String password,
         @NotBlank @Size(min = 12, max = 128) String confirmPassword,
         @NotBlank @Size(max = 100) String institutionalId,
-        @NotBlank @Size(max = 200) String registrationCode) {
+        @NotBlank @Size(max = 200) String registrationCode,
+        lk.ruhunaefac.qrattendance.user.entity.Student.Department department) {
     @Override public String toString() { return "RegisterRequest[sensitive fields redacted]"; }
 }

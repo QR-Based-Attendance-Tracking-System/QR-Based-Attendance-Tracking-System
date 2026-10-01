@@ -40,12 +40,15 @@ public class AttendanceController {
     @PostMapping("/sessions")
     public ResponseEntity<AttendanceSessionResponse> startSession(@Valid @RequestBody StartAttendanceSessionRequest request,
                                                                    @AuthenticationPrincipal UserDetails principal) {
-        String lecturerName = principal.getUsername();
-        var session = request.lectureHallId() != null
-                ? attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallId())
-                : attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceSessionResponse.from(
-                session));
+        try {
+            String lecturerName = principal.getUsername();
+            var session = request.lectureHallId() != null
+                    ? attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallId())
+                    : attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallName());
+            return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceSessionResponse.from(session));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+        }
     }
 
     @PostMapping("/sessions/{sessionId}/end")

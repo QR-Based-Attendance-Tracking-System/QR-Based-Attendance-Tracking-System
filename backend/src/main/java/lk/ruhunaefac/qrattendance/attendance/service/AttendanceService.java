@@ -78,10 +78,17 @@ public class AttendanceService {
                 .orElse(false);
         if (!assignedCourse) throw new IllegalArgumentException("Course is not assigned to this lecturer");
         LectureHall hall = lectureHallRepository.findById(lectureHallId).orElseThrow(() -> new IllegalArgumentException("Lecture hall not found: " + lectureHallId));
+        Instant now = Instant.now();
+        List<AttendanceSession> activeSessions = sessionRepository.findByLecturerNameAndActiveTrue(lecturerName);
+        activeSessions.forEach(activeSession -> {
+            activeSession.setActive(false);
+            activeSession.setEndedAt(now);
+        });
+        if (!activeSessions.isEmpty()) sessionRepository.saveAll(activeSessions);
         AttendanceSession session = new AttendanceSession();
         session.setCourseCode(courseCode); session.setLecturerName(lecturerName); session.setLectureHall(hall);
-        session.setSecretKey(secretKey.clone()); session.setStartedAt(Instant.now()); session.setActive(true);
-        return sessionRepository.save(session);
+        session.setSecretKey(secretKey.clone()); session.setStartedAt(now); session.setActive(true);
+        return sessionRepository.saveAndFlush(session);
     }
 
     @Transactional

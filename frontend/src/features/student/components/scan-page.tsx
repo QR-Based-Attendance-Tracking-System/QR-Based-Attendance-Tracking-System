@@ -131,8 +131,6 @@ export default function ScanPage() {
 
           scannedRef.current = true;
 
-          console.log("QR detected:", decodedText);
-
           setIsProcessing(true);
 
           await stopScanner();
@@ -149,6 +147,14 @@ export default function ScanPage() {
     } catch (err) {
       console.error("Camera error:", err);
 
+      const scanner = scannerRef.current;
+      if (scanner) {
+        try {
+          scanner.clear();
+        } catch {
+          // The scanner may not have initialized its UI yet.
+        }
+      }
       scannerRef.current = null;
       setIsScanning(false);
 

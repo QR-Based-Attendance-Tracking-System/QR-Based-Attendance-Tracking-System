@@ -52,8 +52,12 @@ public class AuthenticationService {
 
     @Transactional
     public IssuedSession login(LoginRequest request) {
+        String identifier = request.username().strip();
+        String username = users.findByUsernameIgnoreCase(identifier).isPresent() ? identifier
+                : students.findByStudentIdIgnoreCase(identifier)
+                        .map(student -> student.getUser().getUsername()).orElse(identifier);
         Authentication authentication = authenticationManager.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(request.username().strip(), request.password()));
+                UsernamePasswordAuthenticationToken.unauthenticated(username, request.password()));
         User user = users.findByUsernameIgnoreCase(authentication.getName()).orElseThrow();
         return issue(user);
     }
@@ -61,10 +65,12 @@ public class AuthenticationService {
     @Transactional
     public IssuedSession register(User.Role role, RegisterRequest request) {
         String expectedCode = role == User.Role.STUDENT ? studentRegistrationCode : lecturerRegistrationCode;
-        if (expectedCode.length() < 32 || !MessageDigest.isEqual(expectedCode.getBytes(StandardCharsets.UTF_8), request.registrationCode().getBytes(StandardCharsets.UTF_8))) {
+        if (expectedCode.isBlank() || !MessageDigest.isEqual(expectedCode.getBytes(StandardCharsets.UTF_8), request.registrationCode().getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account registration is unavailable or the registration code is invalid");
         }
         if (!request.password().equals(request.confirmPassword())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+        if (role == User.Role.STUDENT && request.department() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department is required");
+        if (role == User.Role.LECTURER && request.department() != null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department is only valid for student accounts");
         String username = request.username().strip();
         String email = request.email().strip().toLowerCase(Locale.ROOT);
         if (role == User.Role.STUDENT && users.existsByUsernameIgnoreCase(username)) throw duplicate();
@@ -76,7 +82,10 @@ public class AuthenticationService {
         if (role == User.Role.STUDENT) {
             if (students.existsByStudentIdIgnoreCase(request.institutionalId().strip())) throw duplicate();
             Student student = new Student(); student.setUser(user); student.setStudentId(request.institutionalId().strip());
-            student.setFullName(request.fullName().strip()); students.save(student); user.setStudent(student);
+            student.setFullName(request.fullName().strip());
+            student.setDepartment(request.department());
+            students.save(student);
+            user.setStudent(student);
         } else {
             if (lecturers.existsByLecturerIdIgnoreCase(request.institutionalId().strip())) throw duplicate();
             Lecturer lecturer = new Lecturer(); lecturer.setUser(user); lecturer.setLecturerId(request.institutionalId().strip());

@@ -8,7 +8,7 @@ Passwords use Spring Security's Argon2id encoder. Student and Lecturer credentia
 
 Configure `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` through the deployment secret manager. Do not commit production secrets. Set `APP_SECURITY_ALLOWED_ORIGINS` to the exact frontend origin(s). Keep `APP_SECURITY_COOKIE_SECURE=true` in production; set it to `false` only for local HTTP development.
 
-Account creation requires distinct, high-entropy `APP_STUDENT_REGISTRATION_CODE` and `APP_LECTURER_REGISTRATION_CODE` values. Leave them unset to disable registration. Supply each code through an out-of-band faculty process. This project does not currently have email verification or a password-reset delivery service.
+Account creation requires `APP_STUDENT_REGISTRATION_CODE` and `APP_LECTURER_REGISTRATION_CODE` values. Any nonblank configured code is accepted, so short values such as `lecturer-local` work for local development. Leave a code unset to disable registration for that role. In production, use distinct, high-entropy values and supply each through an out-of-band faculty process. This project does not currently have email verification or a password-reset delivery service.
 
 `backend/.env.example` lists the supported variable names for local setup. Export them before starting Spring Boot; the application does not load `.env` files itself.
 

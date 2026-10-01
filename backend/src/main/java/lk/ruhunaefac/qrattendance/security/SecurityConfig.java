@@ -36,6 +36,7 @@ public class SecurityConfig {
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http, AuthSessionRepository sessions,
             CorsConfigurationSource corsConfigurationSource, @Value("${app.security.cookie-secure:true}") boolean secureCookie) throws Exception {
         var csrfRepo = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfRepo.setHeaderName("X-CSRF-TOKEN");
         csrfRepo.setCookiePath("/"); csrfRepo.setCookieCustomizer(cookie -> cookie.sameSite("Lax").secure(secureCookie));
         var csrfHandler = new CsrfTokenRequestAttributeHandler(); csrfHandler.setCsrfRequestAttributeName(null);
         http.cors(cors -> cors.configurationSource(corsConfigurationSource))

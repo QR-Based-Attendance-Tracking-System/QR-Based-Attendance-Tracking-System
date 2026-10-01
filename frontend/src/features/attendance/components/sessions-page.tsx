@@ -60,6 +60,7 @@ export function SessionsPage() {
     try {
       await endAttendanceSession(sessionId);
       setIsActive(false);
+      setSessionId(null);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Could not end the attendance session.");
     } finally {
@@ -67,5 +68,5 @@ export function SessionsPage() {
     }
   }
 
-  return <div className="session-page"><h2>Start Attendance Session</h2>{error && <p role="alert" className="attendance-error">{error}</p>}<div className="session-layout"><SessionDetailsForm {...form} onChange={updateForm} isActive={isActive} isSaving={isSaving} isLoadingCourses={isLoadingCourses} courses={courses} onStart={startSession} /><SessionQrCard sessionId={sessionId} isActive={isActive} isSaving={isSaving} onEnd={endSession} /></div></div>;
+  return <div className="session-page"><h2>Start Attendance Session</h2>{error && <p role="alert" className="attendance-error">{error}</p>}<div className="session-layout"><SessionDetailsForm {...form} onChange={updateForm} isActive={isActive} isSaving={isSaving} isLoadingCourses={isLoadingCourses} courses={courses} onStart={startSession} /><SessionQrCard key={isActive ? sessionId ?? "active" : "idle"} sessionId={sessionId} isActive={isActive} isSaving={isSaving} onEnd={endSession} /></div></div>;
 }

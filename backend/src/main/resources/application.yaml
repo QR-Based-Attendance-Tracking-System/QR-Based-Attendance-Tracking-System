@@ -1,3 +1,6 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   application:
     name: qr-attendance-backend
@@ -21,3 +24,8 @@ app:
     allowed-origins: ${APP_SECURITY_ALLOWED_ORIGINS:http://localhost:3000}
     student-registration-code: ${APP_STUDENT_REGISTRATION_CODE:}
     lecturer-registration-code: ${APP_LECTURER_REGISTRATION_CODE:}
+
+attendance:
+  # Required. A missing signing key prevents startup instead of using a predictable default.
+  qr-token-secret: ${ATTENDANCE_QR_TOKEN_SECRET}
+  qr-token-validity-seconds: ${ATTENDANCE_QR_TOKEN_VALIDITY_SECONDS:30}

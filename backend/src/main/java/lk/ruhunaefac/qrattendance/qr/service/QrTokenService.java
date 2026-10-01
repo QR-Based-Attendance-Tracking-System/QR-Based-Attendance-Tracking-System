@@ -17,7 +17,7 @@ public class QrTokenService {
     private final byte[] signingKey;
     private final long validitySeconds;
 
-    public QrTokenService(@Value("${attendance.qr-token-secret}") String secret, @Value("${attendance.qr-token-validity-seconds:60}") long validitySeconds) {
+    public QrTokenService(@Value("${attendance.qr-token-secret}") String secret, @Value("${attendance.qr-token-validity-seconds:30}") long validitySeconds) {
         if (secret == null || secret.isBlank()) throw new IllegalArgumentException("QR token secret must be configured");
         if (validitySeconds <= 0) throw new IllegalArgumentException("QR token validity must be greater than zero");
         this.signingKey = secret.getBytes(StandardCharsets.UTF_8); this.validitySeconds = validitySeconds;
@@ -38,12 +38,12 @@ public class QrTokenService {
     }
 
     public Instant currentWindowExpiry(Instant now) {
-        long window = Math.floorDiv(now.getEpochSecond(), validitySeconds);
-        return Instant.ofEpochSecond(Math.multiplyExact(window + 1, validitySeconds));
+        return Instant.ofEpochSecond(currentWindowStart(now) + validitySeconds);
     }
 
     public long currentWindowStart(Instant now) {
-        return Math.floorDiv(now.getEpochSecond(), validitySeconds) * validitySeconds;
+        long epochSecond = now.getEpochSecond();
+        return Math.floorDiv(epochSecond, validitySeconds) * validitySeconds;
     }
 
     /** Derives an unpredictable, six digit code from the server-only signing key and current window. */
@@ -55,8 +55,13 @@ public class QrTokenService {
 
     public boolean validateCode(UUID sessionId, String code, Instant now) {
         if (code == null || !code.matches("\\d{6}")) return false;
-        String expected = generateCode(sessionId, currentWindowStart(now));
-        return MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), code.getBytes(StandardCharsets.US_ASCII));
+        long currentWindow = currentWindowStart(now);
+        for (long windowStart : new long[] { currentWindow, currentWindow - validitySeconds }) {
+            if (windowStart < 0 || now.getEpochSecond() >= windowStart + validitySeconds) continue;
+            String expected = generateCode(sessionId, windowStart);
+            if (MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), code.getBytes(StandardCharsets.US_ASCII))) return true;
+        }
+        return false;
     }
 
     public UUID validateToken(String token) {
