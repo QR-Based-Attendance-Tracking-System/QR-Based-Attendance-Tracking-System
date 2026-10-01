@@ -27,6 +27,9 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "email", length = 254)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;
@@ -44,8 +47,15 @@ public class User {
     public UUID getId() { return id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public Student getStudent() { return student; }
+    public void setStudent(Student student) { this.student = student; }
+    public Lecturer getLecturer() { return lecturer; }
+    public void setLecturer(Lecturer lecturer) { this.lecturer = lecturer; }
+    public Admin getAdmin() { return admin; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
     public Instant getCreatedAt() { return createdAt; }

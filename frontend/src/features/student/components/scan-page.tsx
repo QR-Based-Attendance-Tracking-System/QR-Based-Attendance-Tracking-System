@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import AppHeader from "@/components/AppHeader";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function ScanPage() {
+  const router = useRouter();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannedRef = useRef(false);
 
@@ -52,40 +52,27 @@ export default function ScanPage() {
   const sendAttendance = useCallback(
     async (qrData: string) => {
       try {
-        console.log("API:", API_URL);
-        console.log("QR:", qrData);
+        const csrfResponse = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+        const csrfToken = csrfResponse.headers.get("X-CSRF-TOKEN");
+        if (!csrfResponse.ok || !csrfToken) throw new Error("Could not initialize secure request.");
+        const response = await fetch("/api/attendance/check-in", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken },
+          body: JSON.stringify({ qrToken: qrData }),
+        });
 
-        const response = await fetch(
-          `${API_URL}/api/attendance/scan`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              registrationNumber: "EG/2023/5501",
-              qrData: qrData,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        console.log("Backend response:", data);
+        const data = await response.json().catch(() => null);
 
         if (!response.ok) {
-          setError(
-            data.message ||
-              "Attendance could not be marked."
-          );
+          setError(data?.message || "Attendance could not be marked.");
 
           setIsProcessing(false);
           return;
         }
 
         setSuccessMessage(
-          data.message ||
-            "Attendance marked successfully."
+          "Attendance marked successfully."
         );
 
         setIsProcessing(false);
@@ -207,7 +194,7 @@ export default function ScanPage() {
   async function handleCancel() {
     await stopScanner();
 
-    window.location.href = "/dashboard";
+    router.replace("/dashboard");
   }
 
   /* ============================================================

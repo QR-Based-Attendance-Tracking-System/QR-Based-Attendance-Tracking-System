@@ -40,7 +40,7 @@ public class AttendanceController {
     @PostMapping("/sessions")
     public ResponseEntity<AttendanceSessionResponse> startSession(@Valid @RequestBody StartAttendanceSessionRequest request,
                                                                    @AuthenticationPrincipal UserDetails principal) {
-        String lecturerName = principal == null ? request.lecturerName() : principal.getUsername();
+        String lecturerName = principal.getUsername();
         var session = request.lectureHallId() != null
                 ? attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallId())
                 : attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallName());
@@ -49,13 +49,13 @@ public class AttendanceController {
     }
 
     @PostMapping("/sessions/{sessionId}/end")
-    public AttendanceSessionResponse endSession(@PathVariable UUID sessionId) {
-        return AttendanceSessionResponse.from(attendanceService.stopSession(sessionId));
+    public AttendanceSessionResponse endSession(@PathVariable UUID sessionId, @AuthenticationPrincipal UserDetails principal) {
+        return AttendanceSessionResponse.from(attendanceService.stopSession(sessionId, principal.getUsername()));
     }
 
     @GetMapping("/sessions/latest")
-    public ResponseEntity<AttendanceSessionResponse> getLatestSession() {
-        Optional<AttendanceSessionResponse> latest = attendanceService.getLatestSession().map(AttendanceSessionResponse::from);
+    public ResponseEntity<AttendanceSessionResponse> getLatestSession(@AuthenticationPrincipal UserDetails principal) {
+        Optional<AttendanceSessionResponse> latest = attendanceService.getLatestSession(principal.getUsername()).map(AttendanceSessionResponse::from);
         return latest.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
@@ -66,8 +66,8 @@ public class AttendanceController {
     }
 
     @GetMapping("/sessions/{sessionId}/qr-challenge")
-    public QrChallengeResponse getQrChallenge(@PathVariable UUID sessionId) {
-        return attendanceService.getQrChallenge(sessionId);
+    public QrChallengeResponse getQrChallenge(@PathVariable UUID sessionId, @AuthenticationPrincipal UserDetails principal) {
+        return attendanceService.getQrChallenge(sessionId, principal.getUsername());
     }
 
     @PostMapping("/check-in")
@@ -85,8 +85,8 @@ public class AttendanceController {
     }
 
     @GetMapping("/sessions/{sessionId}/records")
-    public List<AttendanceRecordResponse> getRecords(@PathVariable UUID sessionId) {
-        return attendanceService.getRecords(sessionId).stream().map(AttendanceRecordResponse::from).toList();
+    public List<AttendanceRecordResponse> getRecords(@PathVariable UUID sessionId, @AuthenticationPrincipal UserDetails principal) {
+        return attendanceService.getRecords(sessionId, principal.getUsername()).stream().map(AttendanceRecordResponse::from).toList();
     }
 
     private ResponseEntity<AttendanceRecordResponse> createCheckIn(Supplier<AttendanceRecord> checkIn) {

@@ -3,9 +3,9 @@ spring:
     name: qr-attendance-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/qr_attendance_db
-    username: qr_attendance_app
-    password: Piyumantha@1
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/qr_attendance_db}
+    username: ${DATABASE_USERNAME:qr_attendance_app}
+    password: ${DATABASE_PASSWORD:}
 
   jpa:
     hibernate:
@@ -14,3 +14,10 @@ spring:
 
   flyway:
     enabled: true
+
+app:
+  security:
+    cookie-secure: ${APP_SECURITY_COOKIE_SECURE:true}
+    allowed-origins: ${APP_SECURITY_ALLOWED_ORIGINS:http://localhost:3000}
+    student-registration-code: ${APP_STUDENT_REGISTRATION_CODE:}
+    lecturer-registration-code: ${APP_LECTURER_REGISTRATION_CODE:}

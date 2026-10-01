@@ -23,6 +23,7 @@ import lk.ruhunaefac.qrattendance.course.repository.CourseRepository;
 import lk.ruhunaefac.qrattendance.course.repository.StudentCourseRepository;
 import lk.ruhunaefac.qrattendance.user.entity.Student;
 import lk.ruhunaefac.qrattendance.user.repository.StudentRepository;
+import lk.ruhunaefac.qrattendance.user.repository.LecturerRepository;
 import lk.ruhunaefac.qrattendance.qr.service.QrTokenService;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -38,11 +39,12 @@ public class AttendanceService {
     private final CourseRepository courseRepository;
     private final StudentRepository studentRepository;
     private final StudentCourseRepository studentCourseRepository;
+    private final LecturerRepository lecturerRepository;
 
     public AttendanceService(AttendanceSessionRepository sessionRepository, AttendanceRecordRepository recordRepository,
                              LectureHallRepository lectureHallRepository, QrTokenService qrTokenService,
                              CourseRepository courseRepository, StudentRepository studentRepository,
-                             StudentCourseRepository studentCourseRepository) {
+                             StudentCourseRepository studentCourseRepository, LecturerRepository lecturerRepository) {
         this.sessionRepository = sessionRepository;
         this.recordRepository = recordRepository;
         this.lectureHallRepository = lectureHallRepository;
@@ -50,6 +52,7 @@ public class AttendanceService {
         this.courseRepository = courseRepository;
         this.studentRepository = studentRepository;
         this.studentCourseRepository = studentCourseRepository;
+        this.lecturerRepository = lecturerRepository;
     }
 
     @Transactional
@@ -70,6 +73,10 @@ public class AttendanceService {
 
     @Transactional
     public AttendanceSession startSession(String courseCode, String lecturerName, UUID lectureHallId, byte[] secretKey) {
+        boolean assignedCourse = lecturerRepository.findByUserUsername(lecturerName)
+                .map(lecturer -> lecturer.getCourses().stream().anyMatch(course -> course.getCourseCode().equalsIgnoreCase(courseCode)))
+                .orElse(false);
+        if (!assignedCourse) throw new IllegalArgumentException("Course is not assigned to this lecturer");
         LectureHall hall = lectureHallRepository.findById(lectureHallId).orElseThrow(() -> new IllegalArgumentException("Lecture hall not found: " + lectureHallId));
         AttendanceSession session = new AttendanceSession();
         session.setCourseCode(courseCode); session.setLecturerName(lecturerName); session.setLectureHall(hall);
@@ -78,8 +85,8 @@ public class AttendanceService {
     }
 
     @Transactional
-    public AttendanceSession stopSession(UUID sessionId) {
-        AttendanceSession session = getSession(sessionId);
+    public AttendanceSession stopSession(UUID sessionId, String lecturerUsername) {
+        AttendanceSession session = getOwnedSession(sessionId, lecturerUsername);
         if (!session.isActive()) return session;
         session.setActive(false); session.setEndedAt(Instant.now());
         return sessionRepository.save(session);
@@ -117,8 +124,8 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public QrChallengeResponse getQrChallenge(UUID sessionId) {
-        AttendanceSession session = getSession(sessionId);
+    public QrChallengeResponse getQrChallenge(UUID sessionId, String lecturerUsername) {
+        AttendanceSession session = getOwnedSession(sessionId, lecturerUsername);
         if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
         Instant serverTime = Instant.now();
         Instant expiresAt = qrTokenService.currentWindowExpiry(serverTime);
@@ -136,14 +143,14 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<AttendanceRecord> getRecords(UUID sessionId) {
-        getSession(sessionId);
+    public List<AttendanceRecord> getRecords(UUID sessionId, String lecturerUsername) {
+        getOwnedSession(sessionId, lecturerUsername);
         return recordRepository.findBySessionIdOrderByCheckedInAtDesc(sessionId);
     }
 
     @Transactional(readOnly = true)
-    public Optional<AttendanceSession> getLatestSession() {
-        return sessionRepository.findFirstByOrderByStartedAtDesc();
+    public Optional<AttendanceSession> getLatestSession(String lecturerUsername) {
+        return sessionRepository.findFirstByLecturerNameOrderByStartedAtDesc(lecturerUsername);
     }
 
     @Transactional(readOnly = true)
@@ -188,6 +195,11 @@ public class AttendanceService {
         private long checkIns;
         private CourseAccumulator(Instant latestSessionAt) { this.latestSessionAt = latestSessionAt; }
         private void add(long count) { sessions++; checkIns += count; }
+    }
+
+    private AttendanceSession getOwnedSession(UUID sessionId, String lecturerUsername) {
+        return sessionRepository.findByIdAndLecturerName(sessionId, lecturerUsername)
+                .orElseThrow(() -> new IllegalArgumentException("Attendance session not found"));
     }
 
     private boolean isDuplicateAttendanceConstraint(DataIntegrityViolationException exception) {

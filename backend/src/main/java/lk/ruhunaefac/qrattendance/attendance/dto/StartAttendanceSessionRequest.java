@@ -6,7 +6,6 @@ import java.util.UUID;
 
 public record StartAttendanceSessionRequest(
         @NotBlank String courseCode,
-        @NotBlank String lecturerName,
         UUID lectureHallId,
         String lectureHallName) {
     @AssertTrue(message = "A lecture hall ID or name is required")

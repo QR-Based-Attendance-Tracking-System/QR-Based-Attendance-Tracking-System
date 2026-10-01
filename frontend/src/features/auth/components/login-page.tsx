@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { login, logout } from "@/features/auth/services/auth-client";
 import Link from "next/link";
 import AuthLayout from "@/components/AuthLayout";
 
@@ -49,51 +51,31 @@ function LockIcon() {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [accountType, setAccountType] = useState<AccountType>("student");
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     setError("");
     setIsLoading(true);
-
     const formData = new FormData(event.currentTarget);
-
     const username = String(formData.get("username") || "").trim();
     const password = String(formData.get("password") || "");
-
-    setTimeout(() => {
-      const validAccount = accountType === "student"
-        ? (
-          username === "EG/2023/5501" &&
-          password === "123456"
-        ) ||
-        (
-          username === "EG/2022/0001" &&
-          password === "123456"
-        )
-        : username === "lecturer" && password === "123456";
-
-      if (validAccount) {
-        const destination = "/dashboard";
-
-        if (rememberMe) {
-          localStorage.setItem("isLoggedIn", accountType);
-        } else {
-          sessionStorage.setItem("isLoggedIn", accountType);
-        }
-
-        window.location.href = destination;
+    try {
+      const user = await login(username, password);
+      if (user.role.toLowerCase() !== accountType) {
+        await logout().catch(() => undefined);
+        setError(`This account is registered as a ${user.role.toLowerCase()}.`);
+        setIsLoading(false);
         return;
       }
-
-      setError("Invalid username or password.");
+      router.replace("/dashboard");
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Login failed.");
       setIsLoading(false);
-
-    }, 500);
+    }
   }
 
   return (
@@ -222,23 +204,6 @@ export default function LoginPage() {
             "
           />
 
-          {/* Remember */}
-
-          <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 text-[12px] text-[#636161]">
-
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) =>
-                setRememberMe(event.target.checked)
-              }
-              className="h-4 w-4 accent-[#45240e]"
-            />
-
-            Remember me.
-
-          </label>
-
           {/* Error */}
 
           {error && (
@@ -291,6 +256,16 @@ export default function LoginPage() {
             </Link>
 
           </div>
+
+          <p className="mt-5 text-center text-[12px] text-[#636161]">
+            New {accountType === "student" ? "student" : "lecturer"}?{" "}
+            <Link
+              href={`/create-account?role=${accountType}`}
+              className="font-semibold text-[#45240e] underline underline-offset-2"
+            >
+              Create an account
+            </Link>
+          </p>
 
         </form>
 

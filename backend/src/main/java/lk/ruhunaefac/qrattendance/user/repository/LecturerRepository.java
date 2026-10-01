@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LecturerRepository extends JpaRepository<Lecturer, UUID> {
     Optional<Lecturer> findByUserUsername(String username);
+    boolean existsByLecturerIdIgnoreCase(String lecturerId);
 }

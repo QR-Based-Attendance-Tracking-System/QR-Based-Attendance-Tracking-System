@@ -1,6 +1,6 @@
 import type { SessionFormState } from "@/features/attendance/types";
 
-export type StartAttendanceSessionRequest = { courseCode: string; lecturerName: string; lectureHallName: string };
+export type StartAttendanceSessionRequest = { courseCode: string; lectureHallName: string };
 
 export type AttendanceSession = { id: string; active: boolean };
 export type AttendanceSessionDetails = AttendanceSession & {
@@ -31,10 +31,19 @@ export type LecturerCourse = { id: string; courseCode: string; courseName: strin
 export type AddLecturerCourseRequest = { courseCode: string; courseName: string; batch: string };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set("Content-Type", "application/json");
+  if (init?.method && init.method !== "GET") {
+    const csrf = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+    const token = csrf.headers.get("X-CSRF-TOKEN");
+    if (!csrf.ok || !token) throw new Error("Could not initialize a secure request.");
+    headers.set("X-CSRF-TOKEN", token);
+  }
   const response = await fetch(path, {
     ...init,
+    credentials: "same-origin",
     cache: "no-store",
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers,
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
@@ -60,7 +69,6 @@ export const attendanceEndpoints = {
 export function startAttendanceSession(form: SessionFormState) {
   const body: StartAttendanceSessionRequest = {
     courseCode: form.course,
-    lecturerName: "Lecturer",
     lectureHallName: form.location,
   };
   return request<AttendanceSession>(attendanceEndpoints.startSession, {

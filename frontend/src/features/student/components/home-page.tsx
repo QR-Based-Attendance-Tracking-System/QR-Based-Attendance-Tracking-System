@@ -1,29 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { getCurrentUser, type AuthUser } from "@/features/auth/services/auth-client";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
-{/* From  profile*/}
-const student = {
-  name: "Gayan", 
-  registrationNumber: "EG/2023/5501",
-  department: "Computer Engineering",
-};
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const loggedIn =
-      localStorage.getItem("isLoggedIn") ||
-      sessionStorage.getItem("isLoggedIn");
-
-    if (loggedIn !== "student" && loggedIn !== "true") {
-      router.replace("/");
-    }
-  }, [router]);
+  const [profile, setProfile] = useState<AuthUser | null>(null);
+  useEffect(() => { void getCurrentUser().then(setProfile).catch(() => undefined); }, []);
 
   return (
     <main className="min-h-screen bg-[#45240e]">
@@ -102,7 +87,7 @@ export default function HomePage() {
               >
                 Good Morning,
                 <br />
-                {student.name}!
+                {profile?.fullName || "Student"}!
               </h2>
 
               <p
@@ -116,8 +101,7 @@ export default function HomePage() {
                   lg:text-[13px]
                 "
               >
-                {student.registrationNumber} |{" "}
-                {student.department}
+                {profile?.institutionalId || profile?.username || ""} | Faculty of Engineering
               </p>
             </div>
 

@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface StudentRepository extends JpaRepository<Student, UUID> {
     Optional<Student> findByUserUsername(String username);
+    boolean existsByStudentIdIgnoreCase(String studentId);
 }
