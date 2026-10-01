@@ -1,0 +1,18 @@
+# Keep local credentials and environment files out of Docker's build context.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Exclude local tooling, generated output, and unrelated frontend assets.
+.git
+.github
+.vercel
+**/node_modules
+**/.next
+**/target
+**/build
+**/.idea
+**/.vscode
+*.log
