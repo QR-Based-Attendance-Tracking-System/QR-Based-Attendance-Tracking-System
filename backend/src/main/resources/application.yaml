@@ -4,12 +4,12 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/qr_attendance_db
-    username: qr_attendance_app
-    password: Piyumantha@1
+    username: qr_user
+    password: vidu
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
 
   flyway:
