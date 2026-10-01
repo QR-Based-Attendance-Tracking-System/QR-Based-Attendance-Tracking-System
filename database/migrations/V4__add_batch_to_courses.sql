@@ -1,0 +1,2 @@
+ALTER TABLE courses
+    ADD COLUMN batch VARCHAR(50) NOT NULL DEFAULT 'Unspecified';
