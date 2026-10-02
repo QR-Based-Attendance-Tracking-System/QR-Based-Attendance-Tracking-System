@@ -76,3 +76,5 @@ Thumbs.db
 
 .gradle/
 .mvn/timing.properties
+.neon
+node_modules/

@@ -135,8 +135,11 @@ public class AttendanceService {
         AttendanceSession session = getOwnedSession(sessionId, lecturerUsername);
         if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
         Instant serverTime = Instant.now();
-        Instant expiresAt = qrTokenService.currentWindowExpiry(serverTime);
-        long windowStart = qrTokenService.currentWindowStart(serverTime);
+        // Start each challenge's validity period at issue time. Aligning it to a
+        // global wall-clock window can make a newly started session's first QR
+        // code expire almost immediately.
+        Instant expiresAt = qrTokenService.expiryFrom(serverTime);
+        long windowStart = serverTime.getEpochSecond();
         return new QrChallengeResponse(qrTokenService.generateToken(sessionId, expiresAt),
                 qrTokenService.generateCode(sessionId, windowStart), expiresAt, serverTime);
     }
