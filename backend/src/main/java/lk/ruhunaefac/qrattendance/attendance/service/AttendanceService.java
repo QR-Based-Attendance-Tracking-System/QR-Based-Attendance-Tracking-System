@@ -18,9 +18,6 @@ import lk.ruhunaefac.qrattendance.attendance.repository.AttendanceRecordReposito
 import lk.ruhunaefac.qrattendance.attendance.repository.AttendanceSessionRepository;
 import lk.ruhunaefac.qrattendance.lecturehall.entity.LectureHall;
 import lk.ruhunaefac.qrattendance.lecturehall.repository.LectureHallRepository;
-import lk.ruhunaefac.qrattendance.course.entity.Course;
-import lk.ruhunaefac.qrattendance.course.repository.CourseRepository;
-import lk.ruhunaefac.qrattendance.course.repository.StudentCourseRepository;
 import lk.ruhunaefac.qrattendance.user.entity.Student;
 import lk.ruhunaefac.qrattendance.user.repository.StudentRepository;
 import lk.ruhunaefac.qrattendance.user.repository.LecturerRepository;
@@ -36,22 +33,17 @@ public class AttendanceService {
     private final AttendanceRecordRepository recordRepository;
     private final LectureHallRepository lectureHallRepository;
     private final QrTokenService qrTokenService;
-    private final CourseRepository courseRepository;
     private final StudentRepository studentRepository;
-    private final StudentCourseRepository studentCourseRepository;
     private final LecturerRepository lecturerRepository;
 
     public AttendanceService(AttendanceSessionRepository sessionRepository, AttendanceRecordRepository recordRepository,
                              LectureHallRepository lectureHallRepository, QrTokenService qrTokenService,
-                             CourseRepository courseRepository, StudentRepository studentRepository,
-                             StudentCourseRepository studentCourseRepository, LecturerRepository lecturerRepository) {
+                             StudentRepository studentRepository, LecturerRepository lecturerRepository) {
         this.sessionRepository = sessionRepository;
         this.recordRepository = recordRepository;
         this.lectureHallRepository = lectureHallRepository;
         this.qrTokenService = qrTokenService;
-        this.courseRepository = courseRepository;
         this.studentRepository = studentRepository;
-        this.studentCourseRepository = studentCourseRepository;
         this.lecturerRepository = lecturerRepository;
     }
 
@@ -102,13 +94,8 @@ public class AttendanceService {
     @Transactional
     public AttendanceRecord recordAttendance(UUID sessionId, String authenticatedUsername, String status) {
         AttendanceSession session = getSession(sessionId);
-        Course course = courseRepository.findByCourseCodeIgnoreCase(session.getCourseCode())
-                .orElseThrow(() -> new IllegalArgumentException("Course for this attendance session was not found"));
         Student student = studentRepository.findByUserUsername(authenticatedUsername)
                 .orElseThrow(StudentNotEnrolledException::new);
-        if (!studentCourseRepository.existsByStudent_IdAndCourse_Id(student.getId(), course.getId())) {
-            throw new StudentNotEnrolledException();
-        }
         if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
         if (recordRepository.existsBySessionIdAndStudentId(sessionId, student.getStudentId())) {
             throw new AttendanceAlreadyMarkedException();
