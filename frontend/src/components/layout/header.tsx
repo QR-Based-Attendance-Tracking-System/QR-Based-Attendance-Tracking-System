@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Crest } from "@/components/branding/crest";
 import { Icon } from "@/components/ui/icon";
 import { getCurrentUser, logout, type AuthUser } from "@/features/auth/services/auth-client";
 
@@ -20,7 +20,7 @@ export function Header({ isNavigationOpen, onToggleNavigation }: HeaderProps) {
   return (
     <header className="topbar">
       <button className="menu-button" type="button" aria-label={isNavigationOpen ? "Close navigation" : "Open navigation"} aria-expanded={isNavigationOpen} aria-controls="primary-navigation" onClick={onToggleNavigation}><Icon name="menu" /></button>
-      <div className="brand"><Crest /><div><h1>Attendance System</h1><p>Faculty Of Engineering<br />University of Ruhuna</p></div></div>
+      <div className="brand"><Image src="/logo.png" alt="University of Ruhuna logo" width={48} height={62} priority /><div><h1>Attendance System</h1><p>Faculty Of Engineering<br />University of Ruhuna</p></div></div>
       <div className="topbar-right">
         <div className="user-avatar" aria-label="Account profile">{initials || "?"}</div>
         <div className="user-copy"><strong>{name || "Account"}</strong><span>{user?.role === "LECTURER" ? "Lecturer" : "Student"}</span></div>
