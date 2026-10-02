@@ -41,6 +41,10 @@ public class QrTokenService {
         return Instant.ofEpochSecond(currentWindowStart(now) + validitySeconds);
     }
 
+    public Instant expiryFrom(Instant issuedAt) {
+        return issuedAt.plusSeconds(validitySeconds);
+    }
+
     public long currentWindowStart(Instant now) {
         long epochSecond = now.getEpochSecond();
         return Math.floorDiv(epochSecond, validitySeconds) * validitySeconds;
@@ -55,8 +59,12 @@ public class QrTokenService {
 
     public boolean validateCode(UUID sessionId, String code, Instant now) {
         if (code == null || !code.matches("\\d{6}")) return false;
-        long currentWindow = currentWindowStart(now);
-        for (long windowStart : new long[] { currentWindow, currentWindow - validitySeconds }) {
+        long currentSecond = now.getEpochSecond();
+        // Codes are issued in rolling windows beginning at challenge issue time,
+        // so any code issued during the preceding validity period may still be
+        // live. A second granularity loop also handles issuance just before a
+        // second boundary without accepting expired codes.
+        for (long windowStart = currentSecond; windowStart >= currentSecond - validitySeconds; windowStart--) {
             if (windowStart < 0 || now.getEpochSecond() >= windowStart + validitySeconds) continue;
             String expected = generateCode(sessionId, windowStart);
             if (MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), code.getBytes(StandardCharsets.US_ASCII))) return true;
