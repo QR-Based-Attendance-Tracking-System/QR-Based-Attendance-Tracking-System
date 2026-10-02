@@ -78,3 +78,6 @@ Thumbs.db
 .mvn/timing.properties
 .neon
 node_modules/
+
+# Local AI agent skills and guidance
+.agents/
