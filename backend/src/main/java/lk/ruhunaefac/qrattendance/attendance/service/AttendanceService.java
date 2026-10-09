@@ -1,6 +1,10 @@
 package lk.ruhunaefac.qrattendance.attendance.service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -48,44 +52,45 @@ public class AttendanceService {
     }
 
     @Transactional
-    public AttendanceSession startSession(String courseCode, String lecturerName, UUID lectureHallId) {
-        byte[] secretKey = new byte[32];
-        new SecureRandom().nextBytes(secretKey);
-        return startSession(courseCode, lecturerName, lectureHallId, secretKey);
-    }
-
-    @Transactional
-    public AttendanceSession startSession(String courseCode, String lecturerName, String lectureHallName) {
-        LectureHall hall = lectureHallRepository.findByName(lectureHallName)
-                .orElseThrow(() -> new IllegalArgumentException("Lecture hall not found: " + lectureHallName));
-        byte[] secretKey = new byte[32];
-        new SecureRandom().nextBytes(secretKey);
-        return startSession(courseCode, lecturerName, hall.getId(), secretKey);
-    }
-
-    @Transactional
-    public AttendanceSession startSession(String courseCode, String lecturerName, UUID lectureHallId, byte[] secretKey) {
+    public AttendanceSession startSession(String courseCode, String lecturerName, String lectureHallName,
+                                          LocalDate date, LocalTime startTime,
+                                          int durationMinutes) {
+        if (durationMinutes <= 0) throw new IllegalArgumentException("Duration must be greater than zero");
+        if (date == null || startTime == null) throw new IllegalArgumentException("Session date and start time are required");
         boolean assignedCourse = lecturerRepository.findByUserUsername(lecturerName)
                 .map(lecturer -> lecturer.getCourses().stream().anyMatch(course -> course.getCourseCode().equalsIgnoreCase(courseCode)))
                 .orElse(false);
         if (!assignedCourse) throw new IllegalArgumentException("Course is not assigned to this lecturer");
-        LectureHall hall = lectureHallRepository.findById(lectureHallId).orElseThrow(() -> new IllegalArgumentException("Lecture hall not found: " + lectureHallId));
+        LectureHall hall = lectureHallRepository.findByName(lectureHallName)
+                .orElseThrow(() -> new IllegalArgumentException("Lecture hall not found: " + lectureHallName));
+        Instant scheduledStart = ZonedDateTime.of(date, startTime, ZoneId.of("Asia/Colombo")).toInstant();
         Instant now = Instant.now();
         List<AttendanceSession> activeSessions = sessionRepository.findByLecturerNameAndActiveTrue(lecturerName);
-        activeSessions.forEach(activeSession -> {
+        activeSessions.forEach(activeSession -> endIfExpired(activeSession, now));
+        activeSessions.stream().filter(AttendanceSession::isActive).forEach(activeSession -> {
             activeSession.setActive(false);
             activeSession.setEndedAt(now);
         });
         if (!activeSessions.isEmpty()) sessionRepository.saveAll(activeSessions);
         AttendanceSession session = new AttendanceSession();
         session.setCourseCode(courseCode); session.setLecturerName(lecturerName); session.setLectureHall(hall);
-        session.setSecretKey(secretKey.clone()); session.setStartedAt(now); session.setActive(true);
+        byte[] secretKey = new byte[32];
+        new SecureRandom().nextBytes(secretKey);
+        session.setSecretKey(secretKey); session.setScheduledDate(date); session.setScheduledStartTime(startTime);
+        session.setDurationMinutes(durationMinutes); session.setStartedAt(scheduledStart);
+        Instant scheduledEnd = scheduledStart.plusSeconds(durationMinutes * 60L);
+        boolean active = !scheduledStart.isAfter(now) && scheduledEnd.isAfter(now);
+        session.setActive(active);
+        if (!active && !scheduledStart.isAfter(now)) session.setEndedAt(scheduledEnd);
         return sessionRepository.saveAndFlush(session);
     }
 
     @Transactional
     public AttendanceSession stopSession(UUID sessionId, String lecturerUsername) {
         AttendanceSession session = getOwnedSession(sessionId, lecturerUsername);
+        Instant now = Instant.now();
+        activateIfScheduled(session, now);
+        endIfExpired(session, now);
         if (!session.isActive()) return session;
         session.setActive(false); session.setEndedAt(Instant.now());
         return sessionRepository.save(session);
@@ -94,9 +99,9 @@ public class AttendanceService {
     @Transactional
     public AttendanceRecord recordAttendance(UUID sessionId, String authenticatedUsername, String status) {
         AttendanceSession session = getSession(sessionId);
+        ensureSessionActive(session);
         Student student = studentRepository.findByUserUsername(authenticatedUsername)
                 .orElseThrow(StudentNotEnrolledException::new);
-        if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
         if (recordRepository.existsBySessionIdAndStudentId(sessionId, student.getStudentId())) {
             throw new AttendanceAlreadyMarkedException();
         }
@@ -117,10 +122,10 @@ public class AttendanceService {
         return recordAttendance(sessionId, authenticatedUsername, "PRESENT");
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public QrChallengeResponse getQrChallenge(UUID sessionId, String lecturerUsername) {
         AttendanceSession session = getOwnedSession(sessionId, lecturerUsername);
-        if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
+        ensureSessionActive(session);
         Instant serverTime = Instant.now();
         // Start each challenge's validity period at issue time. Aligning it to a
         // global wall-clock window can make a newly started session's first QR
@@ -145,14 +150,25 @@ public class AttendanceService {
         return recordRepository.findBySessionIdOrderByCheckedInAtDesc(sessionId);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Optional<AttendanceSession> getLatestSession(String lecturerUsername) {
-        return sessionRepository.findFirstByLecturerNameOrderByStartedAtDesc(lecturerUsername);
+        Optional<AttendanceSession> latest = sessionRepository.findFirstByLecturerNameOrderByStartedAtDesc(lecturerUsername);
+        latest.ifPresent(session -> {
+            Instant now = Instant.now();
+            activateIfScheduled(session, now);
+            endIfExpired(session, now);
+        });
+        return latest;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LecturerDashboardResponse getLecturerDashboard(String lecturerName) {
         List<AttendanceSession> sessions = sessionRepository.findByLecturerNameOrderByStartedAtDesc(lecturerName);
+        Instant now = Instant.now();
+        sessions.forEach(session -> {
+            activateIfScheduled(session, now);
+            endIfExpired(session, now);
+        });
         List<UUID> sessionIds = sessions.stream().map(AttendanceSession::getId).toList();
         Map<UUID, Long> checkInsBySession = new HashMap<>();
         if (!sessionIds.isEmpty()) {
@@ -197,6 +213,28 @@ public class AttendanceService {
     private AttendanceSession getOwnedSession(UUID sessionId, String lecturerUsername) {
         return sessionRepository.findByIdAndLecturerName(sessionId, lecturerUsername)
                 .orElseThrow(() -> new IllegalArgumentException("Attendance session not found"));
+    }
+
+    private void ensureSessionActive(AttendanceSession session) {
+        Instant now = Instant.now();
+        activateIfScheduled(session, now);
+        endIfExpired(session, now);
+        if (!session.isActive()) throw new IllegalStateException("Attendance session is not active");
+    }
+
+    private void activateIfScheduled(AttendanceSession session, Instant now) {
+        if (!session.isActive() && session.getEndedAt() == null && !session.getStartedAt().isAfter(now)) {
+            session.setActive(true);
+            sessionRepository.save(session);
+        }
+    }
+
+    private void endIfExpired(AttendanceSession session, Instant now) {
+        if (session.isActive() && !session.getStartedAt().plusSeconds(session.getDurationMinutes() * 60L).isAfter(now)) {
+            session.setActive(false);
+            session.setEndedAt(session.getStartedAt().plusSeconds(session.getDurationMinutes() * 60L));
+            sessionRepository.save(session);
+        }
     }
 
     private boolean isDuplicateAttendanceConstraint(DataIntegrityViolationException exception) {

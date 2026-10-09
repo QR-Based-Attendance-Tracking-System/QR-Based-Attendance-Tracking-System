@@ -42,9 +42,8 @@ public class AttendanceController {
                                                                    @AuthenticationPrincipal UserDetails principal) {
         try {
             String lecturerName = principal.getUsername();
-            var session = request.lectureHallId() != null
-                    ? attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallId())
-                    : attendanceService.startSession(request.courseCode(), lecturerName, request.lectureHallName());
+            var session = attendanceService.startSession(request.courseCode(), lecturerName,
+                    request.lectureHallName(), request.date(), request.startTime(), request.durationMinutes());
             return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceSessionResponse.from(session));
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
