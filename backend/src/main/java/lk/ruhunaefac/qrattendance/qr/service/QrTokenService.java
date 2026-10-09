@@ -2,6 +2,7 @@ package lk.ruhunaefac.qrattendance.qr.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Locale;
@@ -24,12 +25,12 @@ public class QrTokenService {
     }
 
     public String generateToken(UUID sessionId) {
-        String payload = sessionId + "." + Instant.now().plusSeconds(validitySeconds).getEpochSecond();
+        String payload = sessionId + "." + Instant.now().plusSeconds(validitySeconds).toEpochMilli();
         return encodeToken(payload);
     }
 
     public String generateToken(UUID sessionId, Instant expiresAt) {
-        String payload = sessionId + "." + expiresAt.getEpochSecond();
+        String payload = sessionId + "." + expiresAt.toEpochMilli();
         return encodeToken(payload);
     }
 
@@ -37,49 +38,60 @@ public class QrTokenService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes(StandardCharsets.UTF_8)) + "." + sign(payload);
     }
 
-    public Instant currentWindowExpiry(Instant now) {
-        return Instant.ofEpochSecond(currentWindowStart(now) + validitySeconds);
+    public Instant currentWindowStart(Instant sessionStartedAt, Instant now) {
+        if (now.isBefore(sessionStartedAt)) throw new IllegalArgumentException("Attendance session has not started");
+        long windowMillis = validitySeconds * 1000L;
+        long elapsedMillis = Duration.between(sessionStartedAt, now).toMillis();
+        long windowIndex = Math.floorDiv(elapsedMillis, windowMillis);
+        return sessionStartedAt.plusMillis(windowIndex * windowMillis);
     }
 
-    public Instant expiryFrom(Instant issuedAt) {
-        return issuedAt.plusSeconds(validitySeconds);
+    public long validitySeconds() {
+        return validitySeconds;
     }
 
-    public long currentWindowStart(Instant now) {
-        long epochSecond = now.getEpochSecond();
-        return Math.floorDiv(epochSecond, validitySeconds) * validitySeconds;
+    public Instant windowExpiry(Instant windowStart) {
+        return windowStart.plusSeconds(validitySeconds);
     }
 
     /** Derives an unpredictable, six digit code from the server-only signing key and current window. */
-    public String generateCode(UUID sessionId, long windowStart) {
-        byte[] digest = signBytes("attendance-code:" + sessionId + ":" + windowStart);
+    public String generateCode(UUID sessionId, Instant windowStart) {
+        byte[] digest = signBytes("attendance-code:" + sessionId + ":" + windowStart.toEpochMilli());
         long value = Integer.toUnsignedLong(java.nio.ByteBuffer.wrap(digest).getInt());
         return String.format(Locale.ROOT, "%06d", value % 1_000_000);
     }
 
-    public boolean validateCode(UUID sessionId, String code, Instant now) {
+    public boolean validateCode(UUID sessionId, Instant sessionStartedAt, String code, Instant now) {
         if (code == null || !code.matches("\\d{6}")) return false;
-        long currentSecond = now.getEpochSecond();
-        // Codes are issued in rolling windows beginning at challenge issue time,
-        // so any code issued during the preceding validity period may still be
-        // live. A second granularity loop also handles issuance just before a
-        // second boundary without accepting expired codes.
-        for (long windowStart = currentSecond; windowStart >= currentSecond - validitySeconds; windowStart--) {
-            if (windowStart < 0 || now.getEpochSecond() >= windowStart + validitySeconds) continue;
-            String expected = generateCode(sessionId, windowStart);
-            if (MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), code.getBytes(StandardCharsets.US_ASCII))) return true;
-        }
-        return false;
+        String expected = generateCode(sessionId, currentWindowStart(sessionStartedAt, now));
+        return MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), code.getBytes(StandardCharsets.US_ASCII));
     }
 
-    public UUID validateToken(String token) {
+    /** Reads the session ID only to locate its persisted start time; callers must still validate the signature. */
+    public UUID readSessionId(String token) {
         try {
             String[] parts = token.split("\\.", 2);
             if (parts.length != 2) throw new IllegalArgumentException("Malformed QR token");
             String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
             String[] values = payload.split("\\.", 2);
+            if (values.length != 2) throw new IllegalArgumentException("Malformed QR token payload");
+            return UUID.fromString(values[0]);
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("Invalid QR token", ex);
+        }
+    }
+
+    public UUID validateToken(String token, Instant sessionStartedAt, Instant now) {
+        try {
+            String[] parts = token.split("\\.", 2);
+            if (parts.length != 2) throw new IllegalArgumentException("Malformed QR token");
+            String payload = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
+            String[] values = payload.split("\\.", 2);
+            if (values.length != 2) throw new IllegalArgumentException("Malformed QR token payload");
             if (!MessageDigest.isEqual(parts[1].getBytes(StandardCharsets.UTF_8), sign(payload).getBytes(StandardCharsets.UTF_8))) throw new IllegalArgumentException("Invalid QR token signature");
-            if (Instant.now().getEpochSecond() >= Long.parseLong(values[1])) throw new IllegalArgumentException("QR token has expired");
+            long expiresAt = Long.parseLong(values[1]);
+            Instant currentWindowExpiry = windowExpiry(currentWindowStart(sessionStartedAt, now));
+            if (expiresAt != currentWindowExpiry.toEpochMilli()) throw new IllegalArgumentException("QR token has expired or is not current");
             return UUID.fromString(values[0]);
         } catch (RuntimeException ex) { throw new IllegalArgumentException("Invalid QR token", ex); }
     }

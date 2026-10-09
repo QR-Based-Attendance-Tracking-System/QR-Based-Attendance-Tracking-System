@@ -1,6 +1,12 @@
 import type { SessionFormState } from "@/features/attendance/types";
 
-export type StartAttendanceSessionRequest = { courseCode: string; lectureHallName: string };
+export type StartAttendanceSessionRequest = {
+  courseCode: string;
+  lectureHallName: string;
+  date: string;
+  startTime: string;
+  durationMinutes: number;
+};
 
 export type AttendanceSession = { id: string; active: boolean };
 export type AttendanceSessionDetails = AttendanceSession & {
@@ -8,6 +14,9 @@ export type AttendanceSessionDetails = AttendanceSession & {
   lecturerName: string;
   lectureHallId: string;
   startedAt: string;
+  date: string;
+  startTime: string;
+  durationMinutes: number;
   endedAt: string | null;
 };
 export type AttendanceRecord = {
@@ -62,6 +71,7 @@ export const attendanceEndpoints = {
   qrChallenge: (sessionId: string) => `/api/attendance/sessions/${sessionId}/qr-challenge`,
   checkInWithCode: "/api/attendance/check-in/code",
   latestSession: "/api/attendance/sessions/latest",
+  activeSession: "/api/attendance/sessions/active",
   lecturerDashboard: "/api/attendance/lecturer-dashboard",
   lecturerCourses: "/api/lecturers/me/courses",
 } as const;
@@ -70,6 +80,9 @@ export function startAttendanceSession(form: SessionFormState) {
   const body: StartAttendanceSessionRequest = {
     courseCode: form.course,
     lectureHallName: form.location,
+    date: form.date,
+    startTime: form.startTime,
+    durationMinutes: Number(form.durationHours) * 60 + Number(form.durationMinutes),
   };
   return request<AttendanceSession>(attendanceEndpoints.startSession, {
     method: "POST",
@@ -87,6 +100,10 @@ export function fetchQrChallenge(sessionId: string) {
 
 export function fetchLatestAttendanceSession() {
   return request<AttendanceSessionDetails | null>(attendanceEndpoints.latestSession);
+}
+
+export function fetchActiveAttendanceSession() {
+  return request<AttendanceSessionDetails | null>(attendanceEndpoints.activeSession);
 }
 
 export function fetchAttendanceRecords(sessionId: string) {

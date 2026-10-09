@@ -2,6 +2,8 @@ package lk.ruhunaefac.qrattendance.attendance.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 import lk.ruhunaefac.qrattendance.lecturehall.entity.LectureHall;
 import org.hibernate.annotations.UuidGenerator;
@@ -18,6 +20,10 @@ public class AttendanceSession {
     private LectureHall lectureHall;
     @JdbcTypeCode(SqlTypes.BINARY) @Column(name = "secret_key", nullable = false, columnDefinition = "bytea") private byte[] secretKey;
     @Column(name = "started_at", nullable = false) private Instant startedAt;
+    @Column(name = "qr_window_started_at") private Instant qrWindowStartedAt;
+    @Column(name = "scheduled_date", nullable = false) private LocalDate scheduledDate;
+    @Column(name = "scheduled_start_time", nullable = false) private LocalTime scheduledStartTime;
+    @Column(name = "duration_minutes", nullable = false) private int durationMinutes;
     @Column(name = "ended_at") private Instant endedAt;
     @Column(nullable = false) private boolean active = true;
     public UUID getId() { return id; }
@@ -31,6 +37,14 @@ public class AttendanceSession {
     public void setSecretKey(byte[] secretKey) { this.secretKey = secretKey; }
     public Instant getStartedAt() { return startedAt; }
     public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }
+    public Instant getQrWindowStartedAt() { return qrWindowStartedAt; }
+    public void setQrWindowStartedAt(Instant qrWindowStartedAt) { this.qrWindowStartedAt = qrWindowStartedAt; }
+    public LocalDate getScheduledDate() { return scheduledDate; }
+    public void setScheduledDate(LocalDate scheduledDate) { this.scheduledDate = scheduledDate; }
+    public LocalTime getScheduledStartTime() { return scheduledStartTime; }
+    public void setScheduledStartTime(LocalTime scheduledStartTime) { this.scheduledStartTime = scheduledStartTime; }
+    public int getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
     public Instant getEndedAt() { return endedAt; }
     public void setEndedAt(Instant endedAt) { this.endedAt = endedAt; }
     public boolean isActive() { return active; }
