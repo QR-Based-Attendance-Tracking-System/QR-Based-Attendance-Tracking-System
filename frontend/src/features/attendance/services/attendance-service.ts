@@ -71,6 +71,7 @@ export const attendanceEndpoints = {
   qrChallenge: (sessionId: string) => `/api/attendance/sessions/${sessionId}/qr-challenge`,
   checkInWithCode: "/api/attendance/check-in/code",
   latestSession: "/api/attendance/sessions/latest",
+  activeSession: "/api/attendance/sessions/active",
   lecturerDashboard: "/api/attendance/lecturer-dashboard",
   lecturerCourses: "/api/lecturers/me/courses",
 } as const;
@@ -99,6 +100,10 @@ export function fetchQrChallenge(sessionId: string) {
 
 export function fetchLatestAttendanceSession() {
   return request<AttendanceSessionDetails | null>(attendanceEndpoints.latestSession);
+}
+
+export function fetchActiveAttendanceSession() {
+  return request<AttendanceSessionDetails | null>(attendanceEndpoints.activeSession);
 }
 
 export function fetchAttendanceRecords(sessionId: string) {

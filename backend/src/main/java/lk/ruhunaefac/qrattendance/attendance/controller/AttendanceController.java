@@ -18,6 +18,7 @@ import lk.ruhunaefac.qrattendance.attendance.exception.StudentNotEnrolledExcepti
 import lk.ruhunaefac.qrattendance.attendance.service.AttendanceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.CacheControl;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,6 +48,8 @@ public class AttendanceController {
             return ResponseEntity.status(HttpStatus.CREATED).body(AttendanceSessionResponse.from(session));
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }
     }
 
@@ -61,6 +64,12 @@ public class AttendanceController {
         return latest.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @GetMapping("/sessions/active")
+    public ResponseEntity<AttendanceSessionResponse> getActiveSession(@AuthenticationPrincipal UserDetails principal) {
+        Optional<AttendanceSessionResponse> active = attendanceService.getActiveSession(principal.getUsername()).map(AttendanceSessionResponse::from);
+        return active.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
     @GetMapping("/lecturer-dashboard")
     public LecturerDashboardResponse getLecturerDashboard(@AuthenticationPrincipal UserDetails principal) {
         if (principal == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
@@ -68,8 +77,8 @@ public class AttendanceController {
     }
 
     @GetMapping("/sessions/{sessionId}/qr-challenge")
-    public QrChallengeResponse getQrChallenge(@PathVariable UUID sessionId, @AuthenticationPrincipal UserDetails principal) {
-        return attendanceService.getQrChallenge(sessionId, principal.getUsername());
+    public ResponseEntity<QrChallengeResponse> getQrChallenge(@PathVariable UUID sessionId, @AuthenticationPrincipal UserDetails principal) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(attendanceService.getQrChallenge(sessionId, principal.getUsername()));
     }
 
     @PostMapping("/check-in")

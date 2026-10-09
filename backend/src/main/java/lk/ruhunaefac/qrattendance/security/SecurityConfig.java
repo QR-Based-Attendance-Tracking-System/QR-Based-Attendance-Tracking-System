@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/register/student", "/api/auth/register/lecturer", "/api/auth/csrf", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/attendance/sessions", "/api/attendance/sessions/*/end").hasRole("LECTURER")
-                .requestMatchers(HttpMethod.GET, "/api/attendance/lecturer-dashboard", "/api/attendance/sessions/*/records", "/api/attendance/sessions/*/qr-challenge", "/api/attendance/sessions/latest").hasRole("LECTURER")
+                .requestMatchers(HttpMethod.GET, "/api/attendance/lecturer-dashboard", "/api/attendance/sessions/*/records", "/api/attendance/sessions/*/qr-challenge", "/api/attendance/sessions/latest", "/api/attendance/sessions/active").hasRole("LECTURER")
                 .requestMatchers(HttpMethod.POST, "/api/attendance/check-in", "/api/attendance/check-in/code").hasRole("STUDENT")
                 .requestMatchers("/api/attendance/**").authenticated()
                 .requestMatchers("/api/lecturers/me/**").hasRole("LECTURER")

@@ -20,6 +20,7 @@ public class AttendanceSession {
     private LectureHall lectureHall;
     @JdbcTypeCode(SqlTypes.BINARY) @Column(name = "secret_key", nullable = false, columnDefinition = "bytea") private byte[] secretKey;
     @Column(name = "started_at", nullable = false) private Instant startedAt;
+    @Column(name = "qr_window_started_at") private Instant qrWindowStartedAt;
     @Column(name = "scheduled_date", nullable = false) private LocalDate scheduledDate;
     @Column(name = "scheduled_start_time", nullable = false) private LocalTime scheduledStartTime;
     @Column(name = "duration_minutes", nullable = false) private int durationMinutes;
@@ -36,6 +37,8 @@ public class AttendanceSession {
     public void setSecretKey(byte[] secretKey) { this.secretKey = secretKey; }
     public Instant getStartedAt() { return startedAt; }
     public void setStartedAt(Instant startedAt) { this.startedAt = startedAt; }
+    public Instant getQrWindowStartedAt() { return qrWindowStartedAt; }
+    public void setQrWindowStartedAt(Instant qrWindowStartedAt) { this.qrWindowStartedAt = qrWindowStartedAt; }
     public LocalDate getScheduledDate() { return scheduledDate; }
     public void setScheduledDate(LocalDate scheduledDate) { this.scheduledDate = scheduledDate; }
     public LocalTime getScheduledStartTime() { return scheduledStartTime; }

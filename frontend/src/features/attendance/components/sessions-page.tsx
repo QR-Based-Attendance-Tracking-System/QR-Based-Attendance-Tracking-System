@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SessionDetailsForm } from "@/features/attendance/components/session-details-form";
 import { SessionQrCard } from "@/features/attendance/components/session-qr-card";
 import type { SessionFormState } from "@/features/attendance/types";
-import { endAttendanceSession, fetchLecturerCourses, startAttendanceSession, type LecturerCourse } from "@/features/attendance/services/attendance-service";
+import { endAttendanceSession, fetchActiveAttendanceSession, fetchLecturerCourses, startAttendanceSession, type LecturerCourse } from "@/features/attendance/services/attendance-service";
 
 export function SessionsPage() {
   const [form, setForm] = useState<SessionFormState>(() => {
@@ -17,6 +17,7 @@ export function SessionsPage() {
   const [isActive, setIsActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingCourses, setIsLoadingCourses] = useState(true);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [courses, setCourses] = useState<LecturerCourse[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,11 +36,29 @@ export function SessionsPage() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    fetchActiveAttendanceSession()
+      .then((session) => {
+        if (!mounted || !session) return;
+        setSessionId(session.id);
+        setIsActive(session.active);
+      })
+      .catch((requestError: unknown) => {
+        if (mounted) setError(requestError instanceof Error ? requestError.message : "Could not restore the active session.");
+      })
+      .finally(() => {
+        if (mounted) setIsRestoringSession(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
   function updateForm(field: keyof SessionFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
   async function startSession() {
+    if (isRestoringSession) return;
     setIsSaving(true);
     setError(null);
     try {
@@ -68,5 +87,5 @@ export function SessionsPage() {
     }
   }
 
-  return <div className="session-page"><h2>Start Attendance Session</h2>{error && <p role="alert" className="attendance-error">{error}</p>}<div className="session-layout"><SessionDetailsForm {...form} onChange={updateForm} isActive={isActive} isSaving={isSaving} isLoadingCourses={isLoadingCourses} courses={courses} onStart={startSession} /><SessionQrCard key={isActive ? sessionId ?? "active" : "idle"} sessionId={sessionId} isActive={isActive} isSaving={isSaving} onEnd={endSession} /></div></div>;
+  return <div className="session-page"><h2>Start Attendance Session</h2>{error && <p role="alert" className="attendance-error">{error}</p>}{isRestoringSession && <p role="status">Checking for an active session…</p>}<div className="session-layout"><SessionDetailsForm {...form} onChange={updateForm} isActive={isActive} isSaving={isSaving || isRestoringSession} isLoadingCourses={isLoadingCourses} courses={courses} onStart={startSession} /><SessionQrCard key={isActive ? sessionId ?? "active" : "idle"} sessionId={sessionId} isActive={isActive} isSaving={isSaving} onEnd={endSession} /></div></div>;
 }

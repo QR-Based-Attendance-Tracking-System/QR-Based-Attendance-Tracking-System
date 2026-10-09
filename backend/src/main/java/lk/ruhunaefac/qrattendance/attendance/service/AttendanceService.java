@@ -72,7 +72,9 @@ public class AttendanceService {
             activeSession.setEndedAt(now);
         });
         if (!activeSessions.isEmpty()) sessionRepository.saveAll(activeSessions);
+
         AttendanceSession session = new AttendanceSession();
+
         session.setCourseCode(courseCode); session.setLecturerName(lecturerName); session.setLectureHall(hall);
         byte[] secretKey = new byte[32];
         new SecureRandom().nextBytes(secretKey);
@@ -81,8 +83,14 @@ public class AttendanceService {
         Instant scheduledEnd = scheduledStart.plusSeconds(durationMinutes * 60L);
         boolean active = !scheduledStart.isAfter(now) && scheduledEnd.isAfter(now);
         session.setActive(active);
+        session.setQrWindowStartedAt(active ? now : null);
         if (!active && !scheduledStart.isAfter(now)) session.setEndedAt(scheduledEnd);
-        return sessionRepository.saveAndFlush(session);
+
+        try {
+            return sessionRepository.saveAndFlush(session);
+        } catch (DataIntegrityViolationException exception) {
+            throw new IllegalStateException("An attendance session was started concurrently. Refresh and try again.", exception);
+        }
     }
 
     @Transactional
@@ -92,7 +100,7 @@ public class AttendanceService {
         activateIfScheduled(session, now);
         endIfExpired(session, now);
         if (!session.isActive()) return session;
-        session.setActive(false); session.setEndedAt(Instant.now());
+        session.setActive(false); session.setEndedAt(now);
         return sessionRepository.save(session);
     }
 
@@ -118,7 +126,11 @@ public class AttendanceService {
 
     @Transactional
     public AttendanceRecord checkIn(String qrToken, String authenticatedUsername) {
-        UUID sessionId = qrTokenService.validateToken(qrToken);
+        Instant now = Instant.now();
+        UUID tokenSessionId = qrTokenService.readSessionId(qrToken);
+        AttendanceSession session = getSession(tokenSessionId);
+        UUID sessionId = qrTokenService.validateToken(qrToken, session.getQrWindowStartedAt(), now);
+        ensureSessionActive(session);
         return recordAttendance(sessionId, authenticatedUsername, "PRESENT");
     }
 
@@ -127,18 +139,17 @@ public class AttendanceService {
         AttendanceSession session = getOwnedSession(sessionId, lecturerUsername);
         ensureSessionActive(session);
         Instant serverTime = Instant.now();
-        // Start each challenge's validity period at issue time. Aligning it to a
-        // global wall-clock window can make a newly started session's first QR
-        // code expire almost immediately.
-        Instant expiresAt = qrTokenService.expiryFrom(serverTime);
-        long windowStart = serverTime.getEpochSecond();
+        Instant windowStart = qrTokenService.currentWindowStart(session.getQrWindowStartedAt(), serverTime);
+        Instant expiresAt = qrTokenService.windowExpiry(windowStart);
         return new QrChallengeResponse(qrTokenService.generateToken(sessionId, expiresAt),
                 qrTokenService.generateCode(sessionId, windowStart), expiresAt, serverTime);
     }
 
     @Transactional
     public AttendanceRecord checkInWithCode(UUID sessionId, String code, String authenticatedUsername) {
-        if (!qrTokenService.validateCode(sessionId, code, Instant.now())) {
+        AttendanceSession session = getSession(sessionId);
+        ensureSessionActive(session);
+        if (!qrTokenService.validateCode(sessionId, session.getQrWindowStartedAt(), code, Instant.now())) {
             throw new IllegalArgumentException("Attendance code is invalid or expired");
         }
         return recordAttendance(sessionId, authenticatedUsername, "PRESENT");
@@ -159,6 +170,15 @@ public class AttendanceService {
             endIfExpired(session, now);
         });
         return latest;
+    }
+
+    @Transactional
+    public Optional<AttendanceSession> getActiveSession(String lecturerUsername) {
+        List<AttendanceSession> activeSessions = sessionRepository.findByLecturerNameAndActiveTrue(lecturerUsername);
+        Instant now = Instant.now();
+        activeSessions.forEach(session -> endIfExpired(session, now));
+        return activeSessions.stream().filter(AttendanceSession::isActive)
+                .max(java.util.Comparator.comparing(AttendanceSession::getStartedAt));
     }
 
     @Transactional
@@ -225,6 +245,7 @@ public class AttendanceService {
     private void activateIfScheduled(AttendanceSession session, Instant now) {
         if (!session.isActive() && session.getEndedAt() == null && !session.getStartedAt().isAfter(now)) {
             session.setActive(true);
+            if (session.getQrWindowStartedAt() == null) session.setQrWindowStartedAt(now);
             sessionRepository.save(session);
         }
     }
