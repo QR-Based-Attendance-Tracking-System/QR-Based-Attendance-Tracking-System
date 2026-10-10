@@ -8,11 +8,15 @@ QR Attendance is a web application for lecturers to create attendance sessions a
 qr-attendance/
 ├── backend/                         # Java 25, Spring Boot REST API
 │   ├── src/main/java/...            # API organized by feature
-│   │   ├── attendance/              # Sessions, QR challenges, check-in
+│   │   ├── attendance/              # Attendance workflows grouped by capability
+│   │   │   ├── session/             # Session lifecycle and its web/data classes
+│   │   │   ├── checkin/             # Student QR/code check-in and records
+│   │   │   ├── challenge/           # Time-limited QR token generation/validation
+│   │   │   └── reporting/           # Lecturer dashboard and attendance views
+│   │   │   └── service/              # Shared session lifecycle and ownership rules
 │   │   ├── auth/                    # Registration, login, persisted sessions
 │   │   ├── course/                  # Lecturer courses and enrollment
 │   │   ├── lecturehall/              # Lecture hall operations
-│   │   ├── qr/                      # QR token services
 │   │   ├── security/                # Session authentication and security config
 │   │   └── user/                    # Student, lecturer, and admin users
 │   ├── src/main/resources/          # Spring configuration
